@@ -6,7 +6,7 @@ from direct.task import Task
 from direct.interval.IntervalGlobal import Sequence
 # Change this panda3d.core import to be more specific
 from panda3d.core import *
-from lammps import lammps
+from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
 import numpy as np
 
 
@@ -118,12 +118,25 @@ class MyApp(ShowBase):
     def run_single(self):
         # Run single timestep and get ids and coords of atoms
         self.lmp.command("run 1")
-        self.atom_ids = self.lmp.numpy.extract_atom("id")
-        self.coords = self.lmp.numpy.extract_atom("x")
-        f = open("test.txt", "a")
-        for atom_id in self.atom_ids:
-            f.write(f"{atom_id}, {self.lmp.map_atom(1)}, x, y, z: {self.coords[atom_id - 1][0]}, {self.coords[atom_id - 1][1]}, {self.coords[atom_id - 1][2]}\n")
 
+        self.box = self.lmp.extract_box() # list of the extracted data: boxlo, boxhi, xy, yz, xz, periodicity, box_change
+
+        atom_ids = self.lmp.numpy.extract_atom("id")
+        x = self.lmp.numpy.extract_atom("x")
+        ix = self.lmp.numpy.extract_compute("compute_ix", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
+        xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
+
+        x_sorted = np.zeros(x.shape)
+        ix_sorted = np.zeros(ix.shape)
+        xu_sorted = np.zeros(xu.shape)
+        for i in range(len(atom_id)):
+            x_sorted[atom_id[i]-1, :] = x[i, :]
+            ix_sorted[atom_id[i]-1, :] = ix[i, :]
+            xu_sorted[atom_id[i]-1, :] = xu[i, :]
+
+        self.coords = x_sorted
+        self.ix = ix_sorted
+        self.xu = xu_sorted
 
 """
     def spinCameraTask(self, task):
