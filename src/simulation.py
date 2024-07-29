@@ -16,7 +16,7 @@ class MyApp(ShowBase):
 
         # Create lammps object and get initial coords
         self.lmp = lammps()
-        self.lmp.file("read_from_file.in")
+        self.lmp.file("../inputs/read_from_file.in")
         self.x = self.lmp.numpy.extract_atom("x")
         self.ix = self.lmp.numpy.extract_compute("compute_ix", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
         self.xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
@@ -71,7 +71,7 @@ class MyApp(ShowBase):
         for atom_id in self.atom_ids:
             # Load atom model. If simulation has a lot of atoms or needs to run very quickly,
             # change the model to a lower poly version, which can be found online. Any .egg file should work.
-            atom = self.loader.loadModel('Sphere_HighPoly.egg')
+            atom = self.loader.loadModel('../models/Sphere_HighPoly.egg')
             # Reparent to render (important to do this so the model can be rendered)'
             atom.reparentTo(self.render)
             if self.atom_type_list[atom_id - 1] in self.atom_types.keys():

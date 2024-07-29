@@ -1,4 +1,4 @@
-include current_inputs.var
+include ../inputs/current_inputs.var
 # Atomify commands start with #/
 
 # Move camera to a nice position
@@ -9,7 +9,7 @@ include current_inputs.var
 #/atom 1 1.0 #ffffff
 #/atom 2 1.5 #ff0000
 
-variable L equal 3
+variable L equal 5
 variable Lhalf equal $(0.5*v_L)
 variable thickness equal 2.0
 
