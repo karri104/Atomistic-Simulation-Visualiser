@@ -129,10 +129,10 @@ class MyApp(ShowBase):
         x_sorted = np.zeros(x.shape)
         ix_sorted = np.zeros(ix.shape)
         xu_sorted = np.zeros(xu.shape)
-        for i in range(len(atom_id)):
-            x_sorted[atom_id[i]-1, :] = x[i, :]
-            ix_sorted[atom_id[i]-1, :] = ix[i, :]
-            xu_sorted[atom_id[i]-1, :] = xu[i, :]
+        for i in range(len(atom_ids)):
+            x_sorted[atom_ids[i]-1, :] = x[i, :]
+            ix_sorted[atom_ids[i]-1, :] = ix[i, :]
+            xu_sorted[atom_ids[i]-1, :] = xu[i, :]
 
         self.coords = x_sorted
         self.ix = ix_sorted
