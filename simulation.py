@@ -57,10 +57,12 @@ class MyApp(ShowBase):
         # Add the moveAtomsTask to task manager
         self.taskMgr.add(self.moveAtomsTask, "MoveAtomsTask")
 
+        # Add the drawSimulationBoxTask to task manager
+        self.taskMgr.add(self.drawSimulationBoxTask, "DrawSimulationBoxTask")
+
         # print("Setting up the camera...")
         # Add the spinCameraTask to task manager
         # self.taskMgr.add(self.spinCameraTask, "SpinCameraTask")
-
 
 
     def createAtomsTask(self, task):
@@ -83,6 +85,49 @@ class MyApp(ShowBase):
             self.atoms.append(atom)
         return Task.done
 
+
+    def drawSimulationBoxTask(self, task):
+        # build cell vectors
+        boxlo, boxhi, xy, yz, xz, periodicity, box_change = self.box
+
+        cell = np.zeros((3,3))
+        np.fill_diagonal(cell, np.array(boxhi)-np.array(boxlo))
+        cell[1,0] = xy
+        cell[2,0] = xz
+        cell[2,1] = yz
+
+        lines = LineSegs()
+
+        # bottom face
+        p = np.zeros(3)
+        lines.moveTo(p[0], p[1], p[2])
+        for i in [1, 2, -1, -2]: # 1==x, 2==y, 3==z
+            p += np.sign(i) * cell[abs(i)-1,:]
+            lines.drawTo(p[0], p[1], p[2])
+
+        # support sides
+        for b in [[], [0], [1], [0,1]]: # base point cell vector combinations
+            p = np.zeros(3)
+            for v in b:
+                p += cell[v, :]
+
+            lines.moveTo(p[0], p[1], p[2])
+            p += cell[2, :]
+            lines.drawTo(p[0], p[1], p[2])
+
+        # top face
+        p = cell[2,:]
+        lines.moveTo(p[0], p[1], p[2])
+        for i in [1, 2, -1, -2]: # 1==x, 2==y, 3==z
+            p += np.sign(i) * cell[abs(i)-1,:]
+            lines.drawTo(p[0], p[1], p[2])
+
+        lines.setThickness(4)
+        node = lines.create()
+        nodepath = NodePath(node)
+        nodepath.reparentTo(render)
+
+        return Task.done
 
 
     def moveAtomsTask(self, task):
@@ -112,7 +157,6 @@ class MyApp(ShowBase):
             posInterval.start()
         self.taskMgr.doMethodLater(self.delayTime - (time.monotonic() - starttime), self.moveAtomsTask, "MoveAtomsTask")
         return Task.done
-
 
 
     def run_single(self):
