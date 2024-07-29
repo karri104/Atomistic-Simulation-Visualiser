@@ -6,7 +6,7 @@ from direct.task import Task
 from direct.interval.IntervalGlobal import Sequence
 # Change this panda3d.core import to be more specific
 from panda3d.core import *
-from lammps import lammps
+from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
 import numpy as np
 
 
@@ -17,7 +17,9 @@ class MyApp(ShowBase):
         # Create lammps object and get initial coords
         self.lmp = lammps()
         self.lmp.file("read_from_file.in")
-        self.coords = self.lmp.numpy.extract_atom("x")
+        self.x = self.lmp.numpy.extract_atom("x")
+        self.ix = self.lmp.numpy.extract_compute("compute_ix", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
+        self.xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
 
         self.atom_count = self.lmp.get_natoms()
         self.atoms = []
@@ -57,10 +59,12 @@ class MyApp(ShowBase):
         # Add the moveAtomsTask to task manager
         self.taskMgr.add(self.moveAtomsTask, "MoveAtomsTask")
 
+        # Add the drawSimulationBoxTask to task manager
+        self.taskMgr.add(self.drawSimulationBoxTask, "DrawSimulationBoxTask")
+
         # print("Setting up the camera...")
         # Add the spinCameraTask to task manager
         # self.taskMgr.add(self.spinCameraTask, "SpinCameraTask")
-
 
 
     def createAtomsTask(self, task):
@@ -78,52 +82,94 @@ class MyApp(ShowBase):
                               self.atom_types[self.atom_type_list[atom_id - 1]]["scale"][1],
                               self.atom_types[self.atom_type_list[atom_id - 1]]["scale"][2])
             # Give atoms random positions
-            atom.setPos(self.coords[atom_id - 1][0], self.coords[atom_id - 1][1], self.coords[atom_id - 1][2])
+            atom.setPos(self.x[atom_id - 1][0], self.x[atom_id - 1][1], self.x[atom_id - 1][2])
             # Add atoms to a list, so they can be easily accessed later
             self.atoms.append(atom)
         return Task.done
 
 
+    def drawSimulationBoxTask(self, task):
+        lines = LineSegs()
+
+        # bottom face
+        p = np.zeros(3)
+        lines.moveTo(p[0], p[1], p[2])
+        for i in [1, 2, -1, -2]: # 1==x, 2==y, 3==z
+            p += np.sign(i) * self.cell[abs(i)-1,:]
+            lines.drawTo(p[0], p[1], p[2])
+
+        # support sides
+        for b in [[], [0], [1], [0,1]]: # base point cell vector combinations
+            p = np.zeros(3)
+            for v in b:
+                p += self.cell[v, :]
+
+            lines.moveTo(p[0], p[1], p[2])
+            p += self.cell[2, :]
+            lines.drawTo(p[0], p[1], p[2])
+
+        # top face
+        p = self.cell[2,:]
+        lines.moveTo(p[0], p[1], p[2])
+        for i in [1, 2, -1, -2]: # 1==x, 2==y, 3==z
+            p += np.sign(i) * self.cell[abs(i)-1,:]
+            lines.drawTo(p[0], p[1], p[2])
+
+        lines.setThickness(4)
+        node = lines.create()
+        nodepath = NodePath(node)
+        nodepath.reparentTo(render)
+
+        return Task.done
+
 
     def moveAtomsTask(self, task):
         starttime = time.monotonic()
         self.run_single()
-        # Give the atoms random movement that changes every self.delayTime seconds
 
-        # Using and not using IDs seem to result in same outcome
-        """
-        for atom_id in self.atom_ids:
-            atom = self.atoms[atom_id - 1]
-            # Get old position and get random new position
-            old_pos = atom.getPos()
-            new_pos = [self.coords[atom_id - 1][0], self.coords[atom_id - 1][1], self.coords[atom_id - 1][2]]
-            # Set posInterval that changes the location of the atom to a new one over
-            # the course of self.delayTime seconds
-            posInterval = atom.posInterval(self.delayTime, Point3(new_pos[0], new_pos[1], new_pos[2]),
-                                           Point3(old_pos[0], old_pos[1], old_pos[2]))
-            posInterval.start()
-        """
         for i in range(self.atom_count):
-            atom = self.atoms[i]
-            old_pos = atom.getPos()
-            new_pos = [self.coords[i][0], self.coords[i][1], self.coords[i][2]]
-            posInterval = atom.posInterval(self.delayTime, Point3(new_pos[0], new_pos[1], new_pos[2]),
-                                           Point3(old_pos[0], old_pos[1], old_pos[2]))
+            new_pos = (self.ix[i,:]-self.ix_old[i,:]) @ self.cell + self.x[i,:]
+
+            posInterval = self.atoms[i].posInterval(self.delayTime, Point3(new_pos[0], new_pos[1], new_pos[2]),
+                                           Point3(self.x_old[i,0], self.x_old[i,1], self.x_old[i,2]))
             posInterval.start()
         self.taskMgr.doMethodLater(self.delayTime - (time.monotonic() - starttime), self.moveAtomsTask, "MoveAtomsTask")
         return Task.done
 
 
-
     def run_single(self):
-        # Run single timestep and get ids and coords of atoms
-        self.lmp.command("run 1")
-        self.atom_ids = self.lmp.numpy.extract_atom("id")
-        self.coords = self.lmp.numpy.extract_atom("x")
-        f = open("test.txt", "a")
-        for atom_id in self.atom_ids:
-            f.write(f"{atom_id}, {self.lmp.map_atom(1)}, x, y, z: {self.coords[atom_id - 1][0]}, {self.coords[atom_id - 1][1]}, {self.coords[atom_id - 1][2]}\n")
+        # store old values for reference
+        self.x_old = self.x.copy()
+        self.ix_old = self.ix.copy()
+        self.xu_old = self.xu.copy()
 
+        # Run single timestep and get ids and coords of atoms
+        self.lmp.command("run 10")
+
+        boxlo, boxhi, xy, yz, xz, periodicity, box_change = self.lmp.extract_box()
+        cell = np.zeros((3,3))
+        np.fill_diagonal(cell, np.array(boxhi)-np.array(boxlo))
+        cell[1,0] = xy
+        cell[2,0] = xz
+        cell[2,1] = yz
+        self.cell = cell
+
+        atom_ids = self.lmp.numpy.extract_atom("id")
+        x = self.lmp.numpy.extract_atom("x")
+        ix = self.lmp.numpy.extract_compute("compute_ix", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
+        xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
+
+        x_sorted = np.zeros(x.shape)
+        ix_sorted = np.zeros(ix.shape)
+        xu_sorted = np.zeros(xu.shape)
+        for i in range(len(atom_ids)):
+            x_sorted[atom_ids[i]-1, :] = x[i, :]
+            ix_sorted[atom_ids[i]-1, :] = ix[i, :]
+            xu_sorted[atom_ids[i]-1, :] = xu[i, :]
+
+        self.x = x_sorted
+        self.ix = ix_sorted
+        self.xu = xu_sorted
 
 """
     def spinCameraTask(self, task):
