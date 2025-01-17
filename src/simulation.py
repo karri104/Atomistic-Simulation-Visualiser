@@ -3,16 +3,20 @@ from math import pi, sin, cos
 from random import randrange
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
-from direct.interval.IntervalGlobal import Sequence
+from direct.gui.DirectGui import *
 # Change this panda3d.core import to be more specific
 from panda3d.core import *
 from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
 import numpy as np
+from funcs import *
 
 
 class MyApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
+
+        # Flags
+        self.pause_flag = False
 
         # Create lammps object and get initial coords
         self.lmp = lammps()
@@ -20,6 +24,8 @@ class MyApp(ShowBase):
         self.x = self.lmp.numpy.extract_atom("x")
         self.ix = self.lmp.numpy.extract_compute("compute_ix", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
         self.xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
+        self.cell = np.zeros((3,3))
+        self.timestep = 10
 
         self.atom_count = self.lmp.get_natoms()
         self.atoms = []
@@ -62,9 +68,20 @@ class MyApp(ShowBase):
         # Add the drawSimulationBoxTask to task manager
         self.taskMgr.add(self.drawSimulationBoxTask, "DrawSimulationBoxTask")
 
-        # print("Setting up the camera...")
-        # Add the spinCameraTask to task manager
-        # self.taskMgr.add(self.spinCameraTask, "SpinCameraTask")
+        print("Setting up the camera...")
+        base.disableMouse()
+        self.camera.setPos(7, -20, 3)
+
+        # Generate GUI objects
+        self.generateGUI()
+
+
+    def generateGUI(self):
+        self.guiFrame = DirectFrame(frameColor=(0.5, 0.5, 0.5, 1), frameSize=(-0.5, 0.5, 0, 2), pos=(1.33, 0, -1))
+        self.start_stop_button = DirectButton(text="Pause", scale=0.1, command=startStopSimulation, extraArgs=[self], textMayChange=1, parent=self.guiFrame)
+        self.start_stop_button.setPos(0.1, 0, 0.05)
+        self.timestep_slider = DirectSlider(value=10, range=(1, 100), pageSize=1, command=changeSpeed, extraArgs=[self],
+                                            parent=self.guiFrame, pos=(-0.1, 0, 1.9), scale=0.35)
 
 
     def createAtomsTask(self, task):
@@ -124,16 +141,18 @@ class MyApp(ShowBase):
 
 
     def moveAtomsTask(self, task):
-        starttime = time.monotonic()
-        self.run_single()
+        print("Moving atoms")
+        if self.pause_flag == False:
+            starttime = time.monotonic()
+            self.run_single()
 
-        for i in range(self.atom_count):
-            new_pos = (self.ix[i,:]-self.ix_old[i,:]) @ self.cell + self.x[i,:]
+            for i in range(self.atom_count):
+                new_pos = (self.ix[i,:]-self.ix_old[i,:]) @ self.cell + self.x[i,:]
 
-            posInterval = self.atoms[i].posInterval(self.delayTime, Point3(new_pos[0], new_pos[1], new_pos[2]),
-                                           Point3(self.x_old[i,0], self.x_old[i,1], self.x_old[i,2]))
-            posInterval.start()
-        self.taskMgr.doMethodLater(self.delayTime - (time.monotonic() - starttime), self.moveAtomsTask, "MoveAtomsTask")
+                posInterval = self.atoms[i].posInterval(self.delayTime, Point3(new_pos[0], new_pos[1], new_pos[2]),
+                                               Point3(self.x_old[i,0], self.x_old[i,1], self.x_old[i,2]))
+                posInterval.start()
+            self.taskMgr.doMethodLater(self.delayTime - (time.monotonic() - starttime), self.moveAtomsTask, "MoveAtomsTask")
         return Task.done
 
 
@@ -144,7 +163,7 @@ class MyApp(ShowBase):
         self.xu_old = self.xu.copy()
 
         # Run single timestep and get ids and coords of atoms
-        self.lmp.command("run 10")
+        self.lmp.command(f"run {self.timestep:.0f}")
 
         boxlo, boxhi, xy, yz, xz, periodicity, box_change = self.lmp.extract_box()
         cell = np.zeros((3,3))
