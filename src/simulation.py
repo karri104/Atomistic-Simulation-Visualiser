@@ -9,6 +9,9 @@ from panda3d.core import *
 from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
 import numpy as np
 from funcs import *
+import multiprocessing as mp
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 
 class MyApp(ShowBase):
@@ -26,12 +29,19 @@ class MyApp(ShowBase):
         self.xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
         self.cell = np.zeros((3,3))
         self.timestep = 10
+        self.tStart = 1
+        self.tStop = 1
+        # How many iterations of thermo info to be stored before deleting old ones
+        self.info_size = 1000
+        self.sim_info = {"Step": [], "v_diffusion_coeff_light": [], "v_msd_light": [], "v_diffusion_coeff_heavy": [],
+                         "v_msd_heavy": [], "Temp": [], "Press": []}
 
         self.atom_count = self.lmp.get_natoms()
         self.atoms = []
         self.atom_ids = self.lmp.numpy.extract_atom("id")
-        # delayTime determines how long each timestep takes
-        self.delayTime = 1
+
+        # delayTime determines how long each animation step takes
+        self.delayTime = 1/60
 
         # Add templates for different atoms. Add more or change values depending on amount of atoms in simulation
         self.atom_types = {1: {"color": [0.9, 0.9, 0.9], "scale": [0.1, 0.1, 0.1]},
@@ -75,13 +85,19 @@ class MyApp(ShowBase):
         # Generate GUI objects
         self.generateGUI()
 
+        # Create initial plots
+        self.fig = createPlots(self)
+
+
 
     def generateGUI(self):
         self.guiFrame = DirectFrame(frameColor=(0.5, 0.5, 0.5, 1), frameSize=(-0.5, 0.5, 0, 2), pos=(1.33, 0, -1))
         self.start_stop_button = DirectButton(text="Pause", scale=0.1, command=startStopSimulation, extraArgs=[self], textMayChange=1, parent=self.guiFrame)
         self.start_stop_button.setPos(0.1, 0, 0.05)
-        self.timestep_slider = DirectSlider(value=10, range=(1, 100), pageSize=1, command=changeSpeed, extraArgs=[self],
+        self.delayTime_slider = DirectSlider(value=10, range=(1, 100), pageSize=1, command=changeSpeed, extraArgs=[self],
                                             parent=self.guiFrame, pos=(-0.1, 0, 1.9), scale=0.35)
+        self.thermo_slider = DirectSlider(value=1, range=(0.1, 30), pageSize=1, command=changeThermo, extraArgs=[self],
+                                            parent=self.guiFrame, pos=(-0.1, 0, 1.7), scale=0.35)
 
 
     def createAtomsTask(self, task):
@@ -164,6 +180,13 @@ class MyApp(ShowBase):
 
         # Run single timestep and get ids and coords of atoms
         self.lmp.command(f"run {self.timestep:.0f}")
+
+        # Store thermo info for graphing
+        extractThermo(self)
+
+        # Update graphs
+        anim = FuncAnimation(self.fig, update, frames=None)
+        plt.show()
 
         boxlo, boxhi, xy, yz, xz, periodicity, box_change = self.lmp.extract_box()
         cell = np.zeros((3,3))
