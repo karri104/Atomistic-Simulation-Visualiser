@@ -10,6 +10,8 @@ from matplotlib.animation import FuncAnimation
 from panda3d.core import *
 from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
 import numpy as np
+import random
+
 
 def startStopSimulation(self):
     if self.pause_flag:
@@ -20,11 +22,11 @@ def startStopSimulation(self):
         self.pause_flag = True
 
 def changeSpeed(self):
-    self.timestep = self.delayTime_slider["value"]
+    self.timestep = self.animTime_slider["value"]
 
 def changeThermo(self):
     # Change thermal endpoint and update fix
-    self.tStop = self.thermo_slider["value"]
+    self.tStop = 2**self.thermo_slider["value"]
     self.lmp.command(f"fix 2 all langevin {self.tStart} {self.tStop} 0.1 102938")
     # Update tStart to be the thermal endpoint of last simulation. This approach
     # might lead to some funkiness if tStop was not reached in previous simulation
@@ -41,16 +43,22 @@ def extractThermo(self):
         if cull:
             del self.sim_info[key][0]
         self.sim_info[key].append(last_thermo[key])
-    print(self.sim_info)
 
 def createPlots(self):
     fig, ax = plt.subplots()
-    graph = ax.plot(self.sim_info["Step"],self.sim_info["Temp"], color='b')[0]
-    return fig
+    graph = ax.plot(self.sim_info["Step"], self.sim_info["Temp"], color='b')[0]
+    plt.show()
+    return graph, fig , ax
 
-def update(frame, self):
-    global graph
-    graph.set_xdata(self.sim_info["Step"])
-    graph.set_ydata(self.sim_info["Temp"])
-    plt.xlim(self.sim_info["Step"][0], self.sim_info["Step"][-1])
+def updatePlots(self):
+    self.graph.set_xdata(self.sim_info["Step"])
+    self.graph.set_ydata(self.sim_info["Temp"])
+    print(self.graph.get_ydata(),"\n\n\n\n\n\n\n\n\n\n\n\n")
+    self.ax.relim()
+    self.ax.autoscale_view()
+    self.fig.canvas.draw()
+    self.fig.canvas.flush_events()
+    plt.pause(1/60)
+
+
 

@@ -9,9 +9,16 @@ from panda3d.core import *
 from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
 import numpy as np
 from funcs import *
-import multiprocessing as mp
+import wx
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
+from matplotlib.backends.backend_wx import NavigationToolbar2Wx
+from matplotlib.figure import Figure
+
+# Used for graphing later
+#matplotlib.use('WXAgg')
 
 
 class MyApp(ShowBase):
@@ -35,13 +42,14 @@ class MyApp(ShowBase):
         self.info_size = 1000
         self.sim_info = {"Step": [], "v_diffusion_coeff_light": [], "v_msd_light": [], "v_diffusion_coeff_heavy": [],
                          "v_msd_heavy": [], "Temp": [], "Press": []}
+        self.graphs = {"Temp": 0, "Press": 0}
 
         self.atom_count = self.lmp.get_natoms()
         self.atoms = []
         self.atom_ids = self.lmp.numpy.extract_atom("id")
 
-        # delayTime determines how long each animation step takes
-        self.delayTime = 1/60
+        # animTime determines how long each animation step takes
+        self.animTime = 1/60
 
         # Add templates for different atoms. Add more or change values depending on amount of atoms in simulation
         self.atom_types = {1: {"color": [0.9, 0.9, 0.9], "scale": [0.1, 0.1, 0.1]},
@@ -86,18 +94,19 @@ class MyApp(ShowBase):
         self.generateGUI()
 
         # Create initial plots
-        self.fig = createPlots(self)
+        self.graph , self.fig, self.ax = createPlots(self)
 
 
 
     def generateGUI(self):
         self.guiFrame = DirectFrame(frameColor=(0.5, 0.5, 0.5, 1), frameSize=(-0.5, 0.5, 0, 2), pos=(1.33, 0, -1))
-        self.start_stop_button = DirectButton(text="Pause", scale=0.1, command=startStopSimulation, extraArgs=[self], textMayChange=1, parent=self.guiFrame)
-        self.start_stop_button.setPos(0.1, 0, 0.05)
-        self.delayTime_slider = DirectSlider(value=10, range=(1, 100), pageSize=1, command=changeSpeed, extraArgs=[self],
+        self.start_stop_button = DirectButton(text="Pause", scale=0.1, command=startStopSimulation, extraArgs=[self], textMayChange=1, parent=self.guiFrame, pos=(0.1, 0, 0.05))
+        self.animTime_slider = DirectSlider(value=1, range=(1, 10), pageSize=0.1, command=changeSpeed, extraArgs=[self],
                                             parent=self.guiFrame, pos=(-0.1, 0, 1.9), scale=0.35)
-        self.thermo_slider = DirectSlider(value=1, range=(0.1, 30), pageSize=1, command=changeThermo, extraArgs=[self],
+        self.thermo_slider = DirectSlider(value=-5, range=(-5, 5), pageSize=0.1, command=changeThermo, extraArgs=[self],
                                             parent=self.guiFrame, pos=(-0.1, 0, 1.7), scale=0.35)
+        self.thermo_label = DirectLabel(text="Thermostat:", parent=self.guiFrame, scale=0.05, pos=(-0.315, 0, 1.75), frameColor=(0.5, 0.5, 0.5, 1))
+        self.animTime_label = DirectLabel(text="Simulation Speed:", parent=self.guiFrame, scale=0.05, pos=(-0.25, 0, 1.95), frameColor=(0.5, 0.5, 0.5, 1))
 
 
     def createAtomsTask(self, task):
@@ -165,10 +174,10 @@ class MyApp(ShowBase):
             for i in range(self.atom_count):
                 new_pos = (self.ix[i,:]-self.ix_old[i,:]) @ self.cell + self.x[i,:]
 
-                posInterval = self.atoms[i].posInterval(self.delayTime, Point3(new_pos[0], new_pos[1], new_pos[2]),
+                posInterval = self.atoms[i].posInterval(self.animTime, Point3(new_pos[0], new_pos[1], new_pos[2]),
                                                Point3(self.x_old[i,0], self.x_old[i,1], self.x_old[i,2]))
                 posInterval.start()
-            self.taskMgr.doMethodLater(self.delayTime - (time.monotonic() - starttime), self.moveAtomsTask, "MoveAtomsTask")
+            self.taskMgr.doMethodLater(self.animTime - (time.monotonic() - starttime), self.moveAtomsTask, "MoveAtomsTask")
         return Task.done
 
 
@@ -185,8 +194,7 @@ class MyApp(ShowBase):
         extractThermo(self)
 
         # Update graphs
-        anim = FuncAnimation(self.fig, update, frames=None)
-        plt.show()
+        updatePlots(self)
 
         boxlo, boxhi, xy, yz, xz, periodicity, box_change = self.lmp.extract_box()
         cell = np.zeros((3,3))
@@ -212,15 +220,6 @@ class MyApp(ShowBase):
         self.x = x_sorted
         self.ix = ix_sorted
         self.xu = xu_sorted
-
-"""
-    def spinCameraTask(self, task):
-        angleDegrees = task.time * 6.0
-        angleRadians = angleDegrees * pi / 180.0
-        self.camera.setPos(30 * sin(angleRadians), -30 * cos(angleRadians), 0)
-        self.camera.setHpr(angleDegrees, 0, 0)
-        return Task.cont
-"""
 
 
 
