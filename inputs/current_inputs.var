@@ -2,3 +2,4 @@ variable thermo equal 100
 variable duration equal 500
 variable tStart equal 1
 variable tStop equal 1
+variable pressure equal 1

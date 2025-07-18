@@ -21,27 +21,29 @@ def startStopSimulation(panda):
     else:
         panda.pause_flag = True
 
-def changeSpeed(panda, v):
+def changeSpeed(panda, label, v):
     panda.timestep = v
+    label.setText(f"Simulation Speed: {panda.timestep:.2f}")
 
-def changeThermo(panda, v):
+def changeThermo(panda, label, v):
     # Change thermal endpoint and update fix
-    panda.tStop = 2**v
+    panda.tStop = 2**(v/1000)
     panda.lmp.command(f"fix 2 all langevin {panda.tStart} {panda.tStop} 0.1 102938")
+    label.setText(f"Thermostat: {panda.tStop:.3f}")
     # Update tStart to be the thermal endpoint of last simulation. This approach
     # might lead to some funkiness if tStop was not reached in previous simulation
     panda.tStart = panda.tStop
 
+def changeBaro(panda, label, v):
+    panda.pStop = v/100000
+    panda.lmp.command(f"fix 3 all nph couple xyz iso {panda.pStart} {panda.pStop} 1")
+    label.setText(f"Barostat: {panda.pStop:.3f}")
+    panda.pStart = panda.pStop
+
 def extractThermo(panda):
     # Store thermo data from last simulation
     last_thermo = panda.lmp.last_thermo()
-    cull = False
-    # Check if there's already max amount of data stored, if so enable cull flag to delete the first entry in each keyword
-    if len(panda.sim_info["Step"]) >= panda.info_size:
-        cull = True
     for key in last_thermo:
-        if cull:
-            del panda.sim_info[key][0]
         panda.sim_info[key].append(last_thermo[key])
 
 
