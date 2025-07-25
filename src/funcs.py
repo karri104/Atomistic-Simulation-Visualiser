@@ -43,6 +43,7 @@ def changeBaro(panda, label, v):
 def extractThermo(panda):
     # Store thermo data from last simulation
     last_thermo = panda.lmp.last_thermo()
+    last_thermo = {k.upper():v for k,v in last_thermo.items()}
     for key in last_thermo:
         panda.sim_info[key].append(last_thermo[key])
 

@@ -1,6 +1,7 @@
 import sys, time
 from PyQt6 import QtWidgets, QtCore, QtGui
 import pyqtgraph as pg
+from PyQt6.QtWidgets import QGroupBox
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from direct.gui.DirectGui import *
@@ -62,25 +63,45 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pressSlider.valueChanged.connect(lambda v: changeBaro(panda, self.pressSliderLabel, v))
         vbox.addWidget(self.pressSlider)
 
-        self.graph = pg.PlotWidget(title="Temperature over Time")
-        self.graph.setLabel('left','Temperature')
-        self.graph.setLabel('bottom','Time','dt')
-        self.curve = self.graph.plot(pen='y')
-        self.xdata, self.ydatas = [], {}
-        self.start = time.time()
-        vbox.addWidget(self.graph)
-        vbox.addStretch(1)
-        self.graphs["Temp"] = self.graph
-        self.curves["Temp"] = self.curve
 
-        self.graph = pg.PlotWidget(title="Pressure over Time")
-        self.graph.setLabel('left', 'Pressure')
-        self.graph.setLabel('bottom', 'Time', 'dt')
-        self.curve = self.graph.plot(pen='y')
-        vbox.addWidget(self.graph)
-        vbox.addStretch(1)
-        self.graphs["Press"] = self.graph
-        self.curves["Press"] = self.curve
+        # Graphing stuff. Creates a box with checkboxes for each "graphable" variable which toggles graph drawing for
+        # said variables. Note: data collection for these variables always happens regardless of these checkboxes
+        print("Creating graphs...")
+        # This key_format dictionary determines graphing options for default behaviour and special cases (mainly just units)
+        var_name = ""
+        self.special_keys = {"STEP": {"ignore": True, "title": "", "unit": "", "y-label": "", "x-label": ""},
+                             "TEMP": {"ignore": False, "title": "Temperature over Time", "x-unit": "dt", "y-unit": "","y-label": "Temperature", "x-label": "Time", "x-var": "Step"},
+                             "PRESS": {"ignore": False, "title": "Pressure over Time",  "x-unit": "dt", "y-unit": "", "y-label": "Pressure", "x-label": "Time", "x-var": "Step"},
+                             "DEFAULT": {"ignore": False, "title": " over Time",  "x-unit": "dt", "y-unit": "", "y-label": "", "x-label": "Time", "x-var": "Step"}}
+        for key in self.panda.sim_info.keys():
+            if key in self.special_keys:
+                if self.special_keys[key]["ignore"] != True:
+                    self.graph = pg.PlotWidget(title=self.special_keys[key]["title"])
+                    self.graph.setLabel("left", self.special_keys[key]["y-label"], self.special_keys[key]["y-unit"])
+                    self.graph.setLabel("bottom", self.special_keys[key]["x-label"], self.special_keys[key]["x-unit"])
+                    self.curve = self.graph.plot(pen='y')
+                    self.xdata, self.ydatas = [], {}
+                    self.start = time.time()
+                    vbox.addWidget(self.graph)
+                    vbox.addStretch(1)
+                    self.graphs[key] = self.graph
+                    self.curves[key] = self.curve
+            else:
+                var_name = key
+                key = "DEFAULT"
+                if self.special_keys[key]["ignore"] != True:
+                    self.graph = pg.PlotWidget(title=var_name + self.special_keys[key]["title"])
+                    self.graph.setLabel("left", var_name + self.special_keys[key]["y-label"], self.special_keys[key]["y-unit"])
+                    self.graph.setLabel("bottom", self.special_keys[key]["x-label"], self.special_keys[key]["x-unit"])
+                    self.curve = self.graph.plot(pen='y')
+                    self.xdata, self.ydatas = [], {}
+                    self.start = time.time()
+                    vbox.addWidget(self.graph)
+                    vbox.addStretch(1)
+                    self.graphs[var_name] = self.graph
+                    self.curves[var_name] = self.curve
+
+
 
         # Panda image label
         self.label = PandaLabel(panda)
@@ -124,7 +145,7 @@ class MainWindow(QtWidgets.QMainWindow):
             t = time.time() - self.start
             extractThermo(self.panda)
             for key in self.graphs:
-                self.xdata, self.ydatas[key] = self.panda.sim_info["Step"], self.panda.sim_info[key]
+                self.xdata, self.ydatas[key] = self.panda.sim_info["STEP"], self.panda.sim_info[key]
                 self.curves[key].setData(self.xdata, self.ydatas[key])
             if len(self.xdata) > self.panda.info_size:
                 self.xdata.pop(0)

@@ -16,7 +16,9 @@ class OffscreenPanda(ShowBase):
     def __init__(self, W, H):
         super().__init__()
         self.W, self.H = W, H
+        # How many iterations of thermo info to be stored before deleting old ones
         self.info_size = 300
+        self.input_file = "../inputs/tersoff.in"
 
         # Offscreen buffer & texture
         buf = self.win.make_texture_buffer("buf", W, H, to_ram=True)
@@ -61,7 +63,7 @@ class OffscreenPanda(ShowBase):
     def setupLammps(self):
         # Create lammps object and get initial coords
         print("Creating lammps instance...")
-        self.lmp.file("../inputs/read_from_file.in")
+        self.lmp.file(self.input_file)
         self.x = self.lmp.numpy.extract_atom("x")
         self.ix = self.lmp.numpy.extract_compute("compute_ix", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
         self.xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
@@ -71,10 +73,28 @@ class OffscreenPanda(ShowBase):
         self.tStop = 1
         self.pStart = 0
         self.pStop = 0
-        # How many iterations of thermo info to be stored before deleting old ones
-        self.sim_info = {"Step": [], "v_diffusion_coeff_light": [], "v_msd_light": [], "v_diffusion_coeff_heavy": [],
-                         "v_msd_heavy": [], "Temp": [], "Press": []}
 
+        # Grab desired variables from read_from_file.in file
+        with open(self.input_file, "r") as f:
+            keywords = []
+            bad_keywords = ["thermo_style", "custom"]
+            lines = f.readlines()
+            keyword_lines = [line for line in lines if line.rstrip().startswith("thermo_style")]
+            for line in keyword_lines:
+                temp = line.split(" ")
+                for word in temp:
+                    keywords.append(word.strip())
+            for keyword in bad_keywords:
+                if keyword in keywords:
+                    keywords.remove(keyword)
+            # Remove duplicates by turning keywords into a set (that doesn't allow for duplicates) and then back to a list
+            keywords = list(set(keywords))
+        # Turn keywords items into a dictionary
+        self.sim_info = {}
+        for keyword in keywords:
+            self.sim_info[keyword.upper()] = []
+
+        # Setup atoms
         self.atom_count = self.lmp.get_natoms()
         self.atoms = []
         self.atom_ids = self.lmp.numpy.extract_atom("id")

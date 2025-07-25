@@ -1,0 +1,20 @@
+include ../inputs/current_inputs.var
+units metal
+
+read_data ../inputs/diamond5_5_10.data
+
+# Set atom masses (might not have to do this step)
+mass 1 12.01
+
+pair_style tersoff
+pair_coeff * * ../inputs/Tersoff.params C
+neigh_modify every 1 delay 0 check yes
+
+thermo ${thermo}
+# Set displayed variables
+thermo_style custom step temp press
+fix 1 all nve
+fix 2 all langevin ${tStart} ${tStop} 0.1 102938
+compute displace all displace/atom
+compute compute_ix all property/atom ix iy iz
+compute compute_xu all property/atom xu yu zu
