@@ -55,6 +55,7 @@ class OffscreenPanda(ShowBase):
 
         # Simulation box
         self.boxPath = 0
+        self.vertices = []
 
         # Spin state
         self.paused = False
@@ -99,7 +100,7 @@ class OffscreenPanda(ShowBase):
         self.atoms = []
         self.atom_ids = self.lmp.numpy.extract_atom("id")
         # Add templates for different atoms. Add more or change values depending on amount of atoms in simulation
-        self.atom_types = {1: {"color": [0.9, 0.9, 0.9], "scale": [0.1, 0.1, 0.1]},
+        self.atom_types = {1: {"color": [0.1, 0.1, 0.1], "scale": [0.2, 0.2, 0.2]},
                            2: {"color": [0.0, 0.0, 0.9], "scale": [0.15, 0.15, 0.15]}}
         self.atom_type_list = self.lmp.numpy.extract_atom("type")
         self.createAtomsTask()
@@ -136,16 +137,17 @@ class OffscreenPanda(ShowBase):
         # bottom face
         p = np.zeros(3)
         self.lines.moveTo(p[0], p[1], p[2])
+        bottom_vertices = []
         for i in [1, 2, -1, -2]: # 1==x, 2==y, 3==z
             p += np.sign(i) * self.cell[abs(i)-1,:]
             self.lines.drawTo(p[0], p[1], p[2])
+            bottom_vertices.append(p)
 
         # support sides
         for b in [[], [0], [1], [0,1]]: # base point cell vector combinations
             p = np.zeros(3)
             for v in b:
                 p += self.cell[v, :]
-
             self.lines.moveTo(p[0], p[1], p[2])
             p += self.cell[2, :]
             self.lines.drawTo(p[0], p[1], p[2])
@@ -153,14 +155,30 @@ class OffscreenPanda(ShowBase):
         # top face
         p = self.cell[2,:]
         self.lines.moveTo(p[0], p[1], p[2])
+        top_vertices = []
         for i in [1, 2, -1, -2]: # 1==x, 2==y, 3==z
             p += np.sign(i) * self.cell[abs(i)-1,:]
             self.lines.drawTo(p[0], p[1], p[2])
+            top_vertices.append(p)
 
         self.lines.setThickness(4)
         node = self.lines.create()
         self.boxPath = NodePath(node)
         self.boxPath.reparentTo(render)
+
+        # Figure out largest distance between vertices for camera autozoom
+        distances = []
+        for i in range(0, 4):
+            for j in range(0, 4):
+                d = np.sqrt((top_vertices[i][0] - bottom_vertices[j][0])**2 +
+                            (top_vertices[i][1] - bottom_vertices[j][1])**2 +
+                            (top_vertices[i][2] - bottom_vertices[j][2])**2)
+                distances.append(d)
+        max_distance = distances.index(max(distances))
+        print(self.cell)
+        print(distances[max_distance])
+        print(top_vertices, bottom_vertices)
+        print(distances)
 
         return Task.done
 

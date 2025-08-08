@@ -11,6 +11,7 @@ from panda3d.core import *
 from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
 import numpy as np
 import random
+from PyQt6 import QtWidgets, QtCore, QtGui
 
 
 def startStopSimulation(panda):
@@ -47,7 +48,10 @@ def extractThermo(panda):
     for key in last_thermo:
         panda.sim_info[key].append(last_thermo[key])
 
-
-
+def toggleGraphView(main_window, graph_name, state):
+    if state == 2:
+        main_window.graphs[graph_name].setVisible(False)
+    elif state == 0:
+        main_window.graphs[graph_name].setVisible(True)
 
 

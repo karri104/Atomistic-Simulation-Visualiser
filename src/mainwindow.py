@@ -22,6 +22,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle("LAMMPS simulation")
         self.graphs = {}
         self.curves = {}
+        self.graph_min_size = [300, 200]    #Height, Width
 
         # Layouts
         central = QtWidgets.QWidget()
@@ -52,8 +53,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tempSliderLabel = QtWidgets.QLabel(f"Thermostat: {panda.tStop}")
         vbox.addWidget(self.tempSliderLabel)
         self.tempSlider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
-        self.tempSlider.setRange(-5000, 5000)
+        self.tempSlider.setRange(-5000, 15000)
         self.tempSlider.valueChanged.connect(lambda v: changeThermo(panda, self.tempSliderLabel, v))
+        self.tempSlider.setTickInterval(1000)
+        self.tempSlider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
         vbox.addWidget(self.tempSlider)
 
         self.pressSliderLabel = QtWidgets.QLabel(f"Barostat: {panda.pStop}")
@@ -62,6 +65,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pressSlider.setRange(-1000, 1000)
         self.pressSlider.valueChanged.connect(lambda v: changeBaro(panda, self.pressSliderLabel, v))
         vbox.addWidget(self.pressSlider)
+
+        # Create a box for toggling individual graphs
+        buttonHBox = QtWidgets.QHBoxLayout()
+        self.graphGraphicalBox = QtWidgets.QGroupBox("Graph Toggles")
+        vbox.addWidget(self.graphGraphicalBox)
+        self.graphCheckboxes = {}
+        for key in self.panda.sim_info.keys():
+            if key != "STEP":
+                checkbox = QtWidgets.QCheckBox(key)
+                checkbox.stateChanged.connect(lambda state, name=key: toggleGraphView(self, name, state))
+                self.graphCheckboxes[key] = checkbox
+                buttonHBox.addWidget(checkbox)
+        self.graphGraphicalBox.setLayout(buttonHBox)
+        vbox.addWidget(self.graphGraphicalBox)
 
 
         # Graphing stuff. Creates a box with checkboxes for each "graphable" variable which toggles graph drawing for
@@ -82,6 +99,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.curve = self.graph.plot(pen='y')
                     self.xdata, self.ydatas = [], {}
                     self.start = time.time()
+                    self.graph.setMinimumSize(self.graph_min_size[0], self.graph_min_size[1])
+                    self.graph.resize(self.graph_min_size[0], self.graph_min_size[1])
                     vbox.addWidget(self.graph)
                     vbox.addStretch(1)
                     self.graphs[key] = self.graph
@@ -96,12 +115,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.curve = self.graph.plot(pen='y')
                     self.xdata, self.ydatas = [], {}
                     self.start = time.time()
+                    self.graph.setMinimumSize(self.graph_min_size[0], self.graph_min_size[1])
+                    self.graph.resize(self.graph_min_size[0], self.graph_min_size[1])
                     vbox.addWidget(self.graph)
                     vbox.addStretch(1)
                     self.graphs[var_name] = self.graph
                     self.curves[var_name] = self.curve
-
-
 
         # Panda image label
         self.label = PandaLabel(panda)
