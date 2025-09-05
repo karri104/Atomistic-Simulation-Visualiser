@@ -87,7 +87,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # This key_format dictionary determines graphing options for default behaviour and special cases (mainly just units)
         var_name = ""
         self.special_keys = {"STEP": {"ignore": True, "title": "", "unit": "", "y-label": "", "x-label": ""},
-                             "TEMP": {"ignore": False, "title": "Temperature over Time", "x-unit": "dt", "y-unit": "","y-label": "Temperature", "x-label": "Time", "x-var": "Step"},
+                             "TEMP": {"ignore": False, "title": "Temperature over Time", "x-unit": "dt", "y-unit": "K","y-label": "Temperature", "x-label": "Time", "x-var": "Step"},
                              "PRESS": {"ignore": False, "title": "Pressure over Time",  "x-unit": "dt", "y-unit": "", "y-label": "Pressure", "x-label": "Time", "x-var": "Step"},
                              "DEFAULT": {"ignore": False, "title": " over Time",  "x-unit": "dt", "y-unit": "", "y-label": "", "x-label": "Time", "x-var": "Step"}}
         for key in self.panda.sim_info.keys():
@@ -171,3 +171,5 @@ class MainWindow(QtWidgets.QMainWindow):
                 for key in self.ydatas:
                     self.ydatas[key].pop(0)
             self.panda.drawSimulationBoxTask()
+            if self.panda.draw_bonds:
+                self.panda.drawBondsTask()

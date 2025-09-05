@@ -55,3 +55,4 @@ def toggleGraphView(main_window, graph_name, state):
         main_window.graphs[graph_name].setVisible(True)
 
 
+

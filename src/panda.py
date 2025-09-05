@@ -10,6 +10,9 @@ from math import pi, sin, cos
 from random import randrange
 from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
 import numpy as np
+from ase import Atoms
+from ase.neighborlist import NeighborList
+from scipy.spatial import cKDTree
 from funcs import *
 
 class OffscreenPanda(ShowBase):
@@ -19,6 +22,7 @@ class OffscreenPanda(ShowBase):
         # How many iterations of thermo info to be stored before deleting old ones
         self.info_size = 300
         self.input_file = "../inputs/tersoff.in"
+        self.cutoffs = []
 
         # Offscreen buffer & texture
         buf = self.win.make_texture_buffer("buf", W, H, to_ram=True)
@@ -57,9 +61,11 @@ class OffscreenPanda(ShowBase):
         self.boxPath = 0
         self.vertices = []
 
-        # Spin state
+        # Flags
         self.paused = False
         self._prev  = self.taskMgr.globalClock.get_frame_time()
+        self.draw_bonds = True
+        self.cutoff_cached = False
 
     def setupLammps(self):
         # Create lammps object and get initial coords
@@ -74,6 +80,7 @@ class OffscreenPanda(ShowBase):
         self.tStop = 1
         self.pStart = 0
         self.pStop = 0
+        self.bond_pairs = []
 
         # Grab desired variables from read_from_file.in file
         with open(self.input_file, "r") as f:
@@ -99,12 +106,14 @@ class OffscreenPanda(ShowBase):
         self.atom_count = self.lmp.get_natoms()
         self.atoms = []
         self.atom_ids = self.lmp.numpy.extract_atom("id")
+        self.type_to_symbol = {1: "C"}
         # Add templates for different atoms. Add more or change values depending on amount of atoms in simulation
-        self.atom_types = {1: {"color": [0.1, 0.1, 0.1], "scale": [0.2, 0.2, 0.2]},
+        self.atom_types = {"C": {"color": [0.1, 0.1, 0.1], "scale": [0.2, 0.2, 0.2]},
                            2: {"color": [0.0, 0.0, 0.9], "scale": [0.15, 0.15, 0.15]}}
+        self.atom_bond_cutoffs = {"C": 1.85}
         self.atom_type_list = self.lmp.numpy.extract_atom("type")
+        self.atom_symbols = [self.type_to_symbol[t] for t in self.atom_type_list]
         self.createAtomsTask()
-
 
     def createAtomsTask(self):
         print("Creating atoms...")
@@ -114,19 +123,18 @@ class OffscreenPanda(ShowBase):
             atom = self.loader.loadModel('../models/Sphere_HighPoly.egg')
             # Reparent to render (important to do this so the model can be rendered)'
             atom.reparentTo(self.render)
-            if self.atom_type_list[atom_id - 1] in self.atom_types.keys():
-                atom.setColor(self.atom_types[self.atom_type_list[atom_id - 1]]["color"][0],
-                              self.atom_types[self.atom_type_list[atom_id - 1]]["color"][1],
-                              self.atom_types[self.atom_type_list[atom_id - 1]]["color"][2], 1)
-                atom.setScale(self.atom_types[self.atom_type_list[atom_id - 1]]["scale"][0],
-                              self.atom_types[self.atom_type_list[atom_id - 1]]["scale"][1],
-                              self.atom_types[self.atom_type_list[atom_id - 1]]["scale"][2])
+            if self.atom_symbols[atom_id - 1] in self.atom_types.keys():
+                atom.setColor(self.atom_types[self.atom_symbols[atom_id - 1]]["color"][0],
+                              self.atom_types[self.atom_symbols[atom_id - 1]]["color"][1],
+                              self.atom_types[self.atom_symbols[atom_id - 1]]["color"][2], 1)
+                atom.setScale(self.atom_types[self.atom_symbols[atom_id - 1]]["scale"][0],
+                              self.atom_types[self.atom_symbols[atom_id - 1]]["scale"][1],
+                              self.atom_types[self.atom_symbols[atom_id - 1]]["scale"][2])
             # Give atoms random positions
             atom.setPos(self.x[atom_id - 1][0], self.x[atom_id - 1][1], self.x[atom_id - 1][2])
             # Add atoms to a list, so they can be easily accessed later
             self.atoms.append(atom)
         return Task.done
-
 
     def drawSimulationBoxTask(self):
         print("Drawing simulation box...")
@@ -174,12 +182,30 @@ class OffscreenPanda(ShowBase):
                             (top_vertices[i][1] - bottom_vertices[j][1])**2 +
                             (top_vertices[i][2] - bottom_vertices[j][2])**2)
                 distances.append(d)
-        max_distance = distances.index(max(distances))
-        print(self.cell)
-        print(distances[max_distance])
-        print(top_vertices, bottom_vertices)
-        print(distances)
+        return Task.done
 
+    def drawBondsTask(self):
+        print("Drawing bonds...")
+        # Create ase atoms objects
+        atoms = Atoms(symbols=self.atom_symbols, positions=self.x)
+        # Assign cutoffs
+        if not self.cutoff_cached:
+            self.cutoffs = [self.atom_bond_cutoffs[symbol] for symbol in self.atom_symbols]
+            self.cutoff_cached = True
+        # Build neighborlist for figuring nearest neighbors
+        nl = NeighborList(self.cutoffs, self_interaction=False, bothways=False)
+        nl.update(atoms)
+        # Extract all C-C bonds for now TODO: make this work for generic atom types
+        for i in range(len(atoms)):
+            if atoms[i].symbol not in self.atom_symbols:
+                continue
+            indices, offsets = nl.get_neighbors(i)
+            for j, offset in zip(indices, offsets):
+                if atoms[j].symbol not in self.atom_symbols:
+                    continue
+                pos_i = atoms[i].position
+                pos_j = atoms[j].position + np.dot(offset, atoms.get_cell())
+                self.bond_pairs.append((pos_i.tolist(), pos_j.tolist()))
         return Task.done
 
 
