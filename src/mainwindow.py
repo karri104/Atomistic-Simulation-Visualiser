@@ -43,6 +43,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.resetbtn.clicked.connect(self.reset_simulation)
         buttonbox.addWidget(self.resetbtn)
 
+        # Show object toggle buttons
+        show_buttonbox = QtWidgets.QHBoxLayout()
+        vbox.addLayout(show_buttonbox)
+        self.showboxbtn = QtWidgets.QPushButton("Box: Hide")
+        self.showboxbtn.clicked.connect(lambda: self.toggle_show_object("box"))
+        show_buttonbox.addWidget(self.showboxbtn)
+        self.showatomsbtn = QtWidgets.QPushButton("Atoms: Hide")
+        self.showatomsbtn.clicked.connect(lambda: self.toggle_show_object("atoms"))
+        show_buttonbox.addWidget(self.showatomsbtn)
+        self.showbondsbtn = QtWidgets.QPushButton("Bonds: Hide")
+        self.showbondsbtn.clicked.connect(lambda: self.toggle_show_object("bonds"))
+        show_buttonbox.addWidget(self.showbondsbtn)
+
         self.simSpeedLabel = QtWidgets.QLabel(f"Simulation Speed: {panda.timestep}")
         vbox.addWidget(self.simSpeedLabel)
         self.speedSlider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
@@ -152,6 +165,34 @@ class MainWindow(QtWidgets.QMainWindow):
         self.panda.lmp.command(f"clear")
         self.panda.setupLammps()
 
+    def toggle_show_object(self, object):
+        if object == "box":
+            if self.panda.show_box:
+                self.panda.box_path.hide()
+                self.showboxbtn.setText("Box: Show")
+            else:
+                self.panda.box_path.show()
+                self.showboxbtn.setText("Box: Hide")
+            self.panda.show_box = not self.panda.show_box
+        if object == "atoms":
+            if self.panda.show_atoms:
+                for i in range(len(self.panda.atoms)):
+                    self.panda.atoms[i].hide()
+                    self.showatomsbtn.setText("Atoms: Show")
+            else:
+                for i in range(len(self.panda.atoms)):
+                    self.panda.atoms[i].show()
+                    self.showatomsbtn.setText("Atoms: Hide")
+            self.panda.show_atoms = not self.panda.show_atoms
+        if object == "bonds":
+            if self.panda.show_bonds:
+                self.panda.bond_node.hide()
+                self.showbondsbtn.setText("Bonds: Show")
+            else:
+                self.panda.bond_node.show()
+                self.showbondsbtn.setText("Bonds: Hide")
+            self.panda.show_bonds = not self.panda.show_bonds
+
     @QtCore.pyqtSlot()
     def update_frame(self):
         if not self.panda.paused:
@@ -170,6 +211,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.xdata.pop(0)
                 for key in self.ydatas:
                     self.ydatas[key].pop(0)
-            self.panda.drawSimulationBoxTask()
-            if self.panda.draw_bonds:
+            if self.panda.show_box:
+                self.panda.drawSimulationBoxTask()
+            if self.panda.show_bonds:
                 self.panda.drawBondsTask()
+

@@ -23,6 +23,10 @@ class OffscreenPanda(ShowBase):
         self.info_size = 300
         self.input_file = "../inputs/tersoff.in"
         self.cutoffs = []
+        self.max_cutoff = 0
+        self.bond_pairs = []
+        self.bond_geom_node = 0
+        self.bond_node = 0
 
         # Offscreen buffer & texture
         buf = self.win.make_texture_buffer("buf", W, H, to_ram=True)
@@ -58,14 +62,16 @@ class OffscreenPanda(ShowBase):
         self.render.set_light(dnp)
 
         # Simulation box
-        self.boxPath = 0
+        self.box_path = 0
         self.vertices = []
 
         # Flags
         self.paused = False
         self._prev  = self.taskMgr.globalClock.get_frame_time()
-        self.draw_bonds = True
         self.cutoff_cached = False
+        self.show_box = True
+        self.show_atoms = True
+        self.show_bonds = True
 
     def setupLammps(self):
         # Create lammps object and get initial coords
@@ -108,8 +114,8 @@ class OffscreenPanda(ShowBase):
         self.atom_ids = self.lmp.numpy.extract_atom("id")
         self.type_to_symbol = {1: "C"}
         # Add templates for different atoms. Add more or change values depending on amount of atoms in simulation
-        self.atom_types = {"C": {"color": [0.1, 0.1, 0.1], "scale": [0.2, 0.2, 0.2]},
-                           2: {"color": [0.0, 0.0, 0.9], "scale": [0.15, 0.15, 0.15]}}
+        self.atom_types = {"C": {"color": [0.1, 0.1, 0.1, 1], "scale": [0.2, 0.2, 0.2]},
+                           2: {"color": [0.0, 0.0, 0.9, 1], "scale": [0.15, 0.15, 0.15]}}
         self.atom_bond_cutoffs = {"C": 1.85}
         self.atom_type_list = self.lmp.numpy.extract_atom("type")
         self.atom_symbols = [self.type_to_symbol[t] for t in self.atom_type_list]
@@ -138,8 +144,8 @@ class OffscreenPanda(ShowBase):
 
     def drawSimulationBoxTask(self):
         print("Drawing simulation box...")
-        if self.boxPath != 0:
-            self.boxPath.removeNode()
+        if self.box_path != 0:
+            self.box_path.removeNode()
         self.lines = LineSegs()
 
         # bottom face
@@ -171,8 +177,8 @@ class OffscreenPanda(ShowBase):
 
         self.lines.setThickness(4)
         node = self.lines.create()
-        self.boxPath = NodePath(node)
-        self.boxPath.reparentTo(render)
+        self.box_path = NodePath(node)
+        self.box_path.reparentTo(render)
 
         # Figure out largest distance between vertices for camera autozoom
         distances = []
@@ -186,26 +192,8 @@ class OffscreenPanda(ShowBase):
 
     def drawBondsTask(self):
         print("Drawing bonds...")
-        # Create ase atoms objects
-        atoms = Atoms(symbols=self.atom_symbols, positions=self.x)
-        # Assign cutoffs
-        if not self.cutoff_cached:
-            self.cutoffs = [self.atom_bond_cutoffs[symbol] for symbol in self.atom_symbols]
-            self.cutoff_cached = True
-        # Build neighborlist for figuring nearest neighbors
-        nl = NeighborList(self.cutoffs, self_interaction=False, bothways=False)
-        nl.update(atoms)
-        # Extract all C-C bonds for now TODO: make this work for generic atom types
-        for i in range(len(atoms)):
-            if atoms[i].symbol not in self.atom_symbols:
-                continue
-            indices, offsets = nl.get_neighbors(i)
-            for j, offset in zip(indices, offsets):
-                if atoms[j].symbol not in self.atom_symbols:
-                    continue
-                pos_i = atoms[i].position
-                pos_j = atoms[j].position + np.dot(offset, atoms.get_cell())
-                self.bond_pairs.append((pos_i.tolist(), pos_j.tolist()))
+        calcAtomPairs(self)
+        create_bond_geometry(self)
         return Task.done
 
 

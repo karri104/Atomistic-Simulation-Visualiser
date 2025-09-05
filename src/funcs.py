@@ -11,6 +11,9 @@ from panda3d.core import *
 from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
 import numpy as np
 import random
+from ase import Atoms
+from ase.neighborlist import NeighborList
+from scipy.spatial import cKDTree
 from PyQt6 import QtWidgets, QtCore, QtGui
 
 
@@ -54,5 +57,44 @@ def toggleGraphView(main_window, graph_name, state):
     elif state == 0:
         main_window.graphs[graph_name].setVisible(True)
 
+def calcAtomPairs(panda):
+    panda.bond_pairs = []
 
+    atoms = Atoms(symbols=panda.atom_symbols, positions=panda.x)
+
+    if not panda.cutoff_cached:
+        panda.cutoffs = np.array([panda.atom_bond_cutoffs[symbol] for symbol in panda.atom_symbols])
+        panda.max_cutoff = np.max(panda.cutoffs)
+        panda.cutoff_cached = True
+
+    positions = atoms.get_positions()
+    tree = cKDTree(positions)
+    pairs = tree.query_pairs(r=panda.max_cutoff)
+
+    for i, j in pairs:
+        cutoff_ij = min(panda.cutoffs[i], panda.cutoffs[j])
+        dist = np.linalg.norm(positions[i] - positions[j])
+        if dist <= cutoff_ij:
+            # Store atom indices and positions
+            panda.bond_pairs.append((i, j, positions[i], positions[j]))
+
+
+def create_bond_geometry(panda, thickness=10.0):
+    if panda.bond_node != 0:
+        panda.bond_node.removeNode()
+
+    lines = LineSegs()
+    lines.setThickness(thickness)
+
+    for i, j, p1, p2 in panda.bond_pairs:
+        atom_type = panda.atom_symbols[i]  # symbol or type ID
+        atom_info = panda.atom_types.get(atom_type, {})
+        color = atom_info.get("color", [1, 1, 1, 1])  # default: white
+
+        lines.setColor(*color)
+        lines.moveTo(*p1)
+        lines.drawTo(*p2)
+
+    panda.bond_node = NodePath(lines.create())
+    panda.bond_node.reparentTo(panda.render)
 
