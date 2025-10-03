@@ -45,7 +45,7 @@ class OffscreenPanda(ShowBase):
         self.cam_h = cam2.get_h()
         self.cam_p = cam2.get_p()
 
-        self.lmp = lammps()
+        self.lmp = lammps(cmdargs=["-log", "none", "-screen", "none", "-nocite"])
         self.setupLammps()
 
         # animTime determines how long each animation step takes
@@ -126,7 +126,7 @@ class OffscreenPanda(ShowBase):
         for atom_id in self.atom_ids:
             # Load atom model. If simulation has a lot of atoms or needs to run very quickly
             # change the model to a lower poly version, which can be found online. Any .egg file should work.
-            atom = self.loader.loadModel('../models/Sphere_HighPoly.egg')
+            atom = self.loader.loadModel('../models/Sphere.egg')
             # Reparent to render (important to do this so the model can be rendered)'
             atom.reparentTo(self.render)
             if self.atom_symbols[atom_id - 1] in self.atom_types.keys():
