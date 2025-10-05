@@ -31,16 +31,20 @@ def changeSpeed(panda, label, v):
 
 def changeThermo(panda, label, v):
     # Change thermal endpoint and update fix
-    panda.tStop = 2**(v/1000)
-    panda.lmp.command(f"fix 2 all langevin {panda.tStart} {panda.tStop} 0.1 102938")
+#    panda.tStop = 2**(v/1000) # migudo
+    panda.tStop = v # migudo
+#    panda.lmp.command(f"fix 2 all langevin {panda.tStart} {panda.tStop} 0.1 102938") # migudo
+    panda.lmp.command(f"fix 2 all temp/csvr {panda.tStart} {panda.tStop} 0.1 102938") # migudo
     label.setText(f"Thermostat: {panda.tStop:.3f}")
     # Update tStart to be the thermal endpoint of last simulation. This approach
     # might lead to some funkiness if tStop was not reached in previous simulation
     panda.tStart = panda.tStop
 
 def changeBaro(panda, label, v):
-    panda.pStop = v/100000
-    panda.lmp.command(f"fix 3 all nph couple xyz iso {panda.pStart} {panda.pStop} 1")
+#    panda.pStop = v/100000 # migudo
+    panda.pStop = v # migudo
+#    panda.lmp.command(f"fix 3 all nph couple xyz iso {panda.pStart} {panda.pStop} 1") # migudo
+    panda.lmp.command(f"fix 3 all press/berendsen aniso {panda.pStart} {panda.pStop} 1.0 modulus 4000000.") # migudo
     label.setText(f"Barostat: {panda.pStop:.3f}")
     panda.pStart = panda.pStop
 

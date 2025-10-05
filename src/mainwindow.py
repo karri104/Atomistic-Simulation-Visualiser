@@ -69,7 +69,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tempSliderLabel = QtWidgets.QLabel(f"Thermostat: {panda.tStop}")
         vbox.addWidget(self.tempSliderLabel)
         self.tempSlider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
-        self.tempSlider.setRange(-5000, 13000)
+#        self.tempSlider.setRange(-5000, 13000) # migudo
+        self.tempSlider.setRange(0, 20000) # migudo
         self.tempSlider.valueChanged.connect(lambda v: changeThermo(panda, self.tempSliderLabel, v))
         self.tempSlider.setTickInterval(1000)
         self.tempSlider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
@@ -78,7 +79,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pressSliderLabel = QtWidgets.QLabel(f"Barostat: {panda.pStop}")
         vbox.addWidget(self.pressSliderLabel)
         self.pressSlider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
-        self.pressSlider.setRange(-1000, 1000)
+#        self.pressSlider.setRange(-1000, 1000) # migudo
+        self.pressSlider.setRange(0, 1000000) # migudo
         self.pressSlider.valueChanged.connect(lambda v: changeBaro(panda, self.pressSliderLabel, v))
         vbox.addWidget(self.pressSlider)
 
@@ -104,7 +106,7 @@ class MainWindow(QtWidgets.QMainWindow):
         var_name = ""
         self.special_keys = {"STEP": {"ignore": True, "title": "", "unit": "", "y-label": "", "x-label": ""},
                              "TEMP": {"ignore": False, "title": "Temperature over Time", "x-unit": "dt", "y-unit": "K","y-label": "Temperature", "x-label": "Time", "x-var": "Step"},
-                             "PRESS": {"ignore": False, "title": "Pressure over Time",  "x-unit": "dt", "y-unit": "", "y-label": "Pressure", "x-label": "Time", "x-var": "Step"},
+                             "PRESS": {"ignore": False, "title": "Pressure over Time",  "x-unit": "dt", "y-unit": "bar", "y-label": "Pressure", "x-label": "Time", "x-var": "Step"},
                              "DEFAULT": {"ignore": False, "title": " over Time",  "x-unit": "dt", "y-unit": "", "y-label": "", "x-label": "Time", "x-var": "Step"}}
         for key in self.panda.sim_info.keys():
             if key in self.special_keys:

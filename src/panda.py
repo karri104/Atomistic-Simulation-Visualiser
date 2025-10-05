@@ -40,13 +40,15 @@ class OffscreenPanda(ShowBase):
         lens = PerspectiveLens()
         #lens.set_fov(90)
         cam2.node().set_lens(lens)
-        cam2.set_pos(4, -25, 3)
+#        cam2.set_pos(4, -25, 3) # migudo
+        cam2.set_pos(7., -30., 7.) # migudo
         self.cam2 = cam2
         self.cam_h = cam2.get_h()
         self.cam_p = cam2.get_p()
 
         self.lmp = lammps(cmdargs=["-log", "none", "-screen", "none", "-nocite"])
         self.setupLammps()
+
 
         # animTime determines how long each animation step takes
         self.animTime = 1 / 60
@@ -82,10 +84,10 @@ class OffscreenPanda(ShowBase):
         self.xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
         self.cell = np.zeros((3, 3))
         self.timestep = 1
-        self.tStart = 1
-        self.tStop = 1
-        self.pStart = 0
-        self.pStop = 0
+        self.tStart = 1. # migudo
+        self.tStop = 1. # migudo
+        self.pStart = 0. # migudo
+        self.pStop = 0. # migudo
         self.bond_pairs = []
 
         # Grab desired variables from read_from_file.in file
@@ -112,6 +114,7 @@ class OffscreenPanda(ShowBase):
         self.atom_count = self.lmp.get_natoms()
         self.atoms = []
         self.atom_ids = self.lmp.numpy.extract_atom("id")
+#        print("Migudo: ", self.atom_ids) # migudo
         self.type_to_symbol = {1: "C"}
         # Add templates for different atoms. Add more or change values depending on amount of atoms in simulation
         self.atom_types = {"C": {"color": [0.1, 0.1, 0.1, 1], "scale": [0.2, 0.2, 0.2]},
@@ -229,15 +232,19 @@ class OffscreenPanda(ShowBase):
         cell[2,1] = yz
         self.cell = cell
 
-        atom_ids = self.lmp.numpy.extract_atom("id")
-        x = self.lmp.numpy.extract_atom("x")
+#        atom_ids = self.lmp.numpy.extract_atom("id")
+#        x = self.lmp.numpy.extract_atom("x")
+        atom_ids = self.lmp.numpy.extract_atom("id")[0:len(self.atom_ids)] # migudo
+        x = self.lmp.numpy.extract_atom("x")[0:len(self.atom_ids)] # migudo
         ix = self.lmp.numpy.extract_compute("compute_ix", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
         xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
 
         x_sorted = np.zeros(x.shape)
         ix_sorted = np.zeros(ix.shape)
         xu_sorted = np.zeros(xu.shape)
+#        print("Migudo: ", atom_ids.shape, x.shape, ix.shape, xu.shape) # migudo
         for i in range(len(atom_ids)):
+#            print("Migudo: ", i) # migudo
             x_sorted[atom_ids[i]-1, :] = x[i, :]
             ix_sorted[atom_ids[i]-1, :] = ix[i, :]
             xu_sorted[atom_ids[i]-1, :] = xu[i, :]
@@ -249,16 +256,20 @@ class OffscreenPanda(ShowBase):
 
     def rotate_camera(self, dx, dy):
         """Called from mouse drag to orbit the offscreen camera."""
-        self.cam_h = (self.cam_h - dx*0.2) % 360
-        self.cam_p = max(-85, min(85, self.cam_p + dy*0.2))
-        self.cam2.set_hpr(self.cam_h, self.cam_p, 0)
+#        self.cam_h = (self.cam_h - dx*0.2) % 360 # migudo
+#        self.cam_p = max(-85, min(85, self.cam_p + dy*0.2)) # migudo
+        self.cam_h = (self.cam_h + dx*0.1) % 360 # migudo
+        self.cam_p = max(-10, min(10, self.cam_p + dy*0.1)) #migudo
+#        self.cam2.set_hpr(self.cam_h, self.cam_p, 0) # migudo
+        self.cam2.set_hpr(self.cam_h, self.cam_p, 0) # migudo
 
 
     def zoom_camera(self, delta):
         """Zoom in/out by moving the camera along its Y-axis."""
         cam = self.cam2
         y = cam.get_y()
-        y = max(-50, min(-2, y + delta * 0.2))  # clamp between -50 and -2
+#        y = max(-50, min(-2, y + delta * 0.2))  # clamp between -50 and -2 migudo
+        y = max(-100, min(0, y + delta * 1.))  # clamp between -50 and -2 migudo
         cam.set_y(y)
 
 

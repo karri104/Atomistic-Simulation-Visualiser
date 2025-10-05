@@ -34,6 +34,7 @@ Detailed installation instruction can be found [here](https://docs.lammps.org/Py
 git clone -b release https://github.com/lammps/lammps.git lammps
 cd lammps/src
 make yes-manybody
+make yes-extra-fix
 make mode=shared serial
 make install-python
 ```
