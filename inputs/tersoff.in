@@ -17,7 +17,7 @@ thermo_style custom step temp press
 fix 1 all nve
 #fix 2 all langevin ${tStart} ${tStop} 0.1 102938
 fix 2 all temp/csvr 1. 1. 0.1 102938
-fix 3 all press/berendsen aniso 0. 0. 1. modulus 4000000.
+fix 3 all press/berendsen aniso 0. 0. 1. modulus 400000.
 
 compute displace all displace/atom
 compute compute_ix all property/atom ix iy iz

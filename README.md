@@ -11,7 +11,7 @@ Since some of the components of this project require very specific versions of p
 venv & pip:
 ```
 sudo apt update
-sudo apt install python3-venv python3-pip
+sudo apt install python3-venv python3-pip libxcb-cursor-dev
 ```
 
 Once you have install these you'll want to create a folder to build the code in e.g. "project":
