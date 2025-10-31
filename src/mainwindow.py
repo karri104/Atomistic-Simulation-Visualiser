@@ -15,6 +15,7 @@ from funcs import *
 from pandalabel import PandaLabel
 from panda import OffscreenPanda
 from timeit import default_timer as timer
+from debug import check_sizes
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, panda: OffscreenPanda):
@@ -200,19 +201,18 @@ class MainWindow(QtWidgets.QMainWindow):
     def update_frame(self):
         if not self.panda.paused:
             # Run a simulation step
-            move_start = timer()
+            #move_start = timer()
             self.panda.moveAtomsTask()
-            move_end = timer()
-            print(f"Moved atoms in {move_end - move_start} seconds")
+            #move_end = timer()
+            #print(f"Moved atoms in {move_end - move_start} seconds")
             # Draw Panda frame
-            panda_frame_start = timer()
+            #panda_frame_start = timer()
             qimg = self.panda.render_frame_to_qimage()
             self.label.setPixmap(QtGui.QPixmap.fromImage(qimg))
-            panda_frame_end = timer()
-            print(f"Drew panda label in {panda_frame_end - panda_frame_start} seconds")
+            #panda_frame_end = timer()
+            #print(f"Drew panda label in {panda_frame_end - panda_frame_start} seconds")
             # Update graphs
-            graph_start = timer()
-            extractThermo(self.panda)
+            #graph_start = timer()
             for key in self.graphs:
                 self.xdata, self.ydatas[key] = self.panda.sim_info["STEP"], self.panda.sim_info[key]
                 self.curves[key].setData(self.xdata, self.ydatas[key])
@@ -220,23 +220,30 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.xdata.pop(0)
                 for key in self.ydatas:
                     self.ydatas[key].pop(0)
-            graph_end = timer()
-            print(f"Updated graphs in {graph_end - graph_start} seconds")
+            #graph_end = timer()
+            #print(f"Updated graphs in {graph_end - graph_start} seconds")
             # Draw simulation box
-            box_start = timer()
+            #box_start = timer()
             if self.panda.show_box:
                 self.panda.drawSimulationBoxTask()
-            box_end = timer()
-            print(f"Drew simulation box in {box_end - box_start} seconds")
+            #box_end = timer()
+            #print(f"Drew simulation box in {box_end - box_start} seconds")
             # Draw bonds
-            bonds_start = timer()
+            #bonds_start = timer()
             if self.panda.show_bonds:
                 self.panda.drawBondsTask()
-            bonds_end = timer()
-            print(f"Drew bonds in {bonds_end - bonds_start} seconds")
-            cycle_time = move_end - move_start + panda_frame_end - panda_frame_start + graph_end - graph_start + box_end - box_start + bonds_end - bonds_start
-            self.total_cycle_time += cycle_time
-            self.cycle_count += 1
-            average_cycle_time = self.total_cycle_time / self.cycle_count
-            print(f"Total runtime: {cycle_time} seconds")
-            print(f"Average cycle time: {average_cycle_time} seconds")
+            #bonds_end = timer()
+            #print(f"Drew bonds in {bonds_end - bonds_start} seconds")
+            #cycle_time = move_end - move_start + panda_frame_end - panda_frame_start + graph_end - graph_start + box_end - box_start + bonds_end - bonds_start
+            #self.total_cycle_time += cycle_time
+            #self.cycle_count += 1
+            #average_cycle_time = self.total_cycle_time / self.cycle_count
+            #print(f"Total runtime: {cycle_time} seconds")
+            #print(f"Average cycle time: {average_cycle_time} seconds")
+
+            # Check object sizes to look for memory leaks
+            print(f"\nPanda memory usage: {check_sizes(self.panda)} bytes")
+            print(f"\nMainWindow memory usage: {check_sizes(self)} bytes")
+            print(f"\nPandaLabel memory usage: {check_sizes(self.label)} bytes")
+            print(f"\nLammps memory usage: {check_sizes(self.panda.lmp)} bytes")
+            print(f"\nGraph memory usage: {check_sizes(self.graphs)} bytes\n")
