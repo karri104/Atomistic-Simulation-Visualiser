@@ -21,7 +21,7 @@ load_prc_file_data("", "gl-force-software true")
 
 
 if __name__ == "__main__":
-    W, H = 960, 720
+    W, H = 1080, 960
     panda = OffscreenPanda(W, H)
     panda.moveAtomsTask()
     panda.drawSimulationBoxTask()

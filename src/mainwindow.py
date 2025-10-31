@@ -15,7 +15,7 @@ from funcs import *
 from pandalabel import PandaLabel
 from panda import OffscreenPanda
 from timeit import default_timer as timer
-from debug import check_sizes
+from debug import get_size
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, panda: OffscreenPanda):
@@ -27,6 +27,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.graph_min_size = [300, 200]    #Height, Width
         self.total_cycle_time = 0
         self.cycle_count = 0
+
+        self.panda_size = 0
+        self.self_size = 0
+        self.pandalabel_size = 0
+        self.lmp_size = 0
+        self.graph_size = 0
 
         # Layouts
         central = QtWidgets.QWidget()
@@ -197,6 +203,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.showbondsbtn.setText("Bonds: Hide")
             self.panda.show_bonds = not self.panda.show_bonds
 
+# TODO: Make timing work on a toggle instead of having to comment out the lines whenever want to disable
+# TODO: Preferably make above be it's own function to keep this cleaner
     @QtCore.pyqtSlot()
     def update_frame(self):
         if not self.panda.paused:
@@ -241,9 +249,26 @@ class MainWindow(QtWidgets.QMainWindow):
             #print(f"Total runtime: {cycle_time} seconds")
             #print(f"Average cycle time: {average_cycle_time} seconds")
 
-            # Check object sizes to look for memory leaks
-            print(f"\nPanda memory usage: {check_sizes(self.panda)} bytes")
-            print(f"\nMainWindow memory usage: {check_sizes(self)} bytes")
-            print(f"\nPandaLabel memory usage: {check_sizes(self.label)} bytes")
-            print(f"\nLammps memory usage: {check_sizes(self.panda.lmp)} bytes")
-            print(f"\nGraph memory usage: {check_sizes(self.graphs)} bytes\n")
+            # Checks object sizes every timestep and keeps track of the largest value.
+            # Prints size and change when new largest found.
+            # (if memory leak present it will keep printing - otherwise not)
+            """
+            # TODO: Move this to debug.py
+            if self.panda_size - get_size(self.panda) < 0:
+                print(f"\nPanda memory usage status: {get_size(self.panda)}\t{self.panda_size - get_size(self.panda)} bytes")
+                self.panda_size = get_size(self.panda)
+            if self.self_size - get_size(self) < 0:
+                print(f"\nMainWindow memory usage status: {get_size(self)}\t{self.self_size - get_size(self)} bytes")
+                self.self_size = get_size(self)
+            #if self.pandalabel_size - get_size(self.label) < 0:
+            #    print(f"\nPandaLabel memory usage status: {get_size(self.label)}\t{self.pandalabel_size - get_size(self.label)} bytes")
+            #    self.pandalabel_size = get_size(self.label)
+            if self.lmp_size - get_size(self.panda.lmp) < 0:
+                print(f"\nLammps memory usage status: {get_size(self.panda.lmp)}\t{self.lmp_size - get_size(self.panda.lmp)} bytes")
+                self.lmp_size = get_size(self.panda.lmp)
+            if self.graph_size - get_size(self.graphs) < 0:
+                print(f"\nGraph memory usage status: {get_size(self.graphs)}\t{self.graph_size - get_size(self.graphs)} bytes\n")
+                self.graph_size = get_size(self.graphs)
+            """
+
+

@@ -1,27 +1,41 @@
-# Code by durden on Github at https://gist.github.com/durden/0b93cfe4027761e17e69c48f9d5c4118
+# Code by jowiggins on Github at https://github.com/bosswissam/pysize/blob/master/pysize.py
+
 import sys
+import inspect
+import logging
 
-def check_sizes(obj, seen=None):
-    """Recursively finds size of objects"""
+logger = logging.getLogger(__name__)
 
+
+def get_size(obj, seen=None):
+    #Recursively finds size of objects in bytes
     size = sys.getsizeof(obj)
     if seen is None:
         seen = set()
-
     obj_id = id(obj)
     if obj_id in seen:
         return 0
-
     # Important mark as seen *before* entering recursion to gracefully handle
     # self-referential objects
     seen.add(obj_id)
-
+    if hasattr(obj, '__dict__'):
+        for cls in obj.__class__.__mro__:
+            if '__dict__' in cls.__dict__:
+                d = cls.__dict__['__dict__']
+                if inspect.isgetsetdescriptor(d) or inspect.ismemberdescriptor(d):
+                    size += get_size(obj.__dict__, seen)
+                break
     if isinstance(obj, dict):
-        size += sum([check_sizes(v, seen) for v in obj.values()])
-        size += sum([check_sizes(k, seen) for k in obj.keys()])
-    elif hasattr(obj, '__dict__'):
-        size += check_sizes(obj.__dict__, seen)
+        size += sum((get_size(v, seen) for v in obj.values()))
+        size += sum((get_size(k, seen) for k in obj.keys()))
     elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
-        size += sum([check_sizes(i, seen) for i in obj])
+        try:
+            size += sum((get_size(i, seen) for i in obj))
+        except TypeError:
+            logging.exception("Unable to get size of %r. This may lead to incorrect sizes. Please report this error.",
+                              obj)
+    if hasattr(obj, '__slots__'):  # can have __slots__ with __dict__
+        size += sum(get_size(getattr(obj, s), seen) for s in obj.__slots__ if hasattr(obj, s))
 
     return size
+

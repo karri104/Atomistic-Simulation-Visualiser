@@ -200,20 +200,20 @@ class OffscreenPanda(ShowBase):
     def moveAtomsTask(self):
         print("Moving atoms...")
         if not self.paused:
-            starttime = time.monotonic()
             self.run_single()
             for i in range(self.atom_count):
-                new_pos = (self.ix[i,:]-self.ix_old[i,:]) @ self.cell + self.x[i,:]
-                self.atoms[i].setPos(new_pos[0], new_pos[1], new_pos[2])
+                diff = self.ix[i, :] - self.ix_old[i, :]
+                new_pos = diff @ self.cell
+                new_pos += self.x[i, :]
         return Task.done
 
 
     def run_single(self):
         print("Running single...")
         # store old values for reference
-        self.x_old = self.x.copy()
+        #self.x_old = self.x.copy()
         self.ix_old = self.ix.copy()
-        self.xu_old = self.xu.copy()
+        #self.xu_old = self.xu.copy()
 
         # Run single timestep and get ids and coords of atoms
         self.lmp.command(f"run {self.timestep:.0f}")
@@ -237,6 +237,7 @@ class OffscreenPanda(ShowBase):
         x_sorted = np.zeros(x.shape)
         ix_sorted = np.zeros(ix.shape)
         xu_sorted = np.zeros(xu.shape)
+        # TODO: Remove loop (use numpy array methods)
         for i in range(len(atom_ids)):
             x_sorted[atom_ids[i]-1, :] = x[i, :]
             ix_sorted[atom_ids[i]-1, :] = ix[i, :]
@@ -244,7 +245,7 @@ class OffscreenPanda(ShowBase):
 
         self.x = x_sorted
         self.ix = ix_sorted
-        self.xu = xu_sorted
+        #self.xu = xu_sorted
 
 
     def rotate_camera(self, dx, dy):
