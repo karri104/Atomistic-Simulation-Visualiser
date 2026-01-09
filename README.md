@@ -20,7 +20,7 @@ mkdir project && cd project/
 python3 -m venv ./venv
 source venv/bin/activate
 ```
-This "project" file work as our base directory. All commands and files should be ran and placed here unless otherwise specified.
+This "project" file works as our base directory. All commands and files should be ran and placed here unless otherwise specified.
 
 PyQt6:
 ```
