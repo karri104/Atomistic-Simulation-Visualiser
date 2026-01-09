@@ -1,21 +1,14 @@
-import sys, time
+import time
 from PyQt6 import QtWidgets, QtCore, QtGui
 import pyqtgraph as pg
-from PyQt6.QtWidgets import QGroupBox
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from direct.gui.DirectGui import *
-# Change this panda3d.core import to be more specific
 from panda3d.core import *
-from math import pi, sin, cos
-from random import randrange
 from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
-import numpy as np
 from funcs import *
 from pandalabel import PandaLabel
 from panda import OffscreenPanda
-from timeit import default_timer as timer
-from debug import get_size
 loadPrcFileData("", "transform-cache false")
 
 class MainWindow(QtWidgets.QMainWindow):

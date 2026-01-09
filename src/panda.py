@@ -1,18 +1,11 @@
-import sys, time
-from PyQt6 import QtWidgets, QtCore, QtGui
-import pyqtgraph as pg
+from PyQt6 import QtGui
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from direct.gui.DirectGui import *
-# Change this panda3d.core import to be more specific
 from panda3d.core import *
-from math import pi, sin, cos
-from random import randrange
 from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
-import numpy as np
 from ase import Atoms
 from ase.neighborlist import NeighborList
-from scipy.spatial import cKDTree
 from funcs import *
 import os
 
@@ -49,10 +42,6 @@ class OffscreenPanda(ShowBase):
 
         self.lmp = lammps(cmdargs=["-log", "none", "-screen", "none", "-nocite"])
         self.setupLammps()
-
-        # animTime determines how long each animation step takes
-        self.animTime = 1 / 60
-
 
         # Build scene
         self.render.set_shader_auto()
@@ -242,10 +231,8 @@ class OffscreenPanda(ShowBase):
             x = self.lmp.numpy.extract_atom("x")[0:len(self.atom_ids)] # migudo
             ix_sorted[atom_ids[i]-1, :] = ix[i, :]
             xu_sorted[atom_ids[i]-1, :] = xu[i, :]
-
         self.x = x
         self.ix = ix_sorted
-        #self.xu = xu_sorted
 
 
     def rotate_camera(self, dx, dy):

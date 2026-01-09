@@ -1,20 +1,12 @@
-import time
-from math import pi, sin, cos
-from random import randrange
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from direct.gui.DirectGui import *
-from matplotlib import pyplot as plt
-from matplotlib.animation import FuncAnimation
-# Change this panda3d.core import to be more specific
 from panda3d.core import *
 from lammps import lammps, LMP_TYPE_VECTOR, LMP_STYLE_ATOM, LMP_TYPE_ARRAY
 import numpy as np
-import random
 from ase import Atoms
 from ase.neighborlist import NeighborList
 from scipy.spatial import cKDTree
-from PyQt6 import QtWidgets, QtCore, QtGui
 
 
 def startStopSimulation(panda):
