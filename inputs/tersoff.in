@@ -1,13 +1,13 @@
-include ../inputs/current_inputs.var
+include inputs/current_inputs.var
 units metal
 
-read_data ../inputs/diamond5_5_10.data
+read_data inputs/diamond5_5_10.data
 
 # Set atom masses (might not have to do this step)
 mass 1 12.01
 
 pair_style tersoff
-pair_coeff * * ../inputs/Tersoff.params C
+pair_coeff * * inputs/Tersoff.params C
 neigh_modify every 1 delay 0 check yes
 
 thermo ${thermo}

@@ -16,6 +16,7 @@ from pandalabel import PandaLabel
 from panda import OffscreenPanda
 from timeit import default_timer as timer
 from debug import get_size
+loadPrcFileData("", "transform-cache false")
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, panda: OffscreenPanda):

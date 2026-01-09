@@ -1,0 +1,7 @@
+panda3d
+numpy
+pyqtgraph
+ase
+pyqt6
+opencv-python
+

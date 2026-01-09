@@ -1,0 +1,17 @@
+services:
+  server:
+    build:
+      context: .
+    user: "${UID}:${UID}"
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - MPLCONFIGDIR=/tmp/matplotlib
+    volumes:
+      - .:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${HOME}/.Xauthority:/home/appuser/.Xauthority:ro
+    working_dir: /app
+    command: python3 src/simulation.py
+    ports:
+      - 8000:8000

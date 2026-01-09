@@ -14,6 +14,7 @@ from ase import Atoms
 from ase.neighborlist import NeighborList
 from scipy.spatial import cKDTree
 from funcs import *
+import os
 
 class OffscreenPanda(ShowBase):
     def __init__(self, W, H):
@@ -21,7 +22,8 @@ class OffscreenPanda(ShowBase):
         self.W, self.H = W, H
         # How many iterations of thermo info to be stored before deleting old ones
         self.info_size = 300
-        self.input_file = "../inputs/tersoff.in"
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.input_file = os.path.join(base_dir, '../inputs/tersoff.in')
         self.cutoffs = []
         self.max_cutoff = 0
         self.bond_pairs = []
@@ -77,7 +79,8 @@ class OffscreenPanda(ShowBase):
         # Create lammps object and get initial coords
         print("Creating lammps instance...")
         self.lmp.file(self.input_file)
-        self.x = self.lmp.numpy.extract_atom("x")
+        self.atom_ids = self.lmp.numpy.extract_atom("id")
+        self.x = self.lmp.numpy.extract_atom("x")[0:len(self.atom_ids)]
         self.ix = self.lmp.numpy.extract_compute("compute_ix", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
         self.xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
         self.cell = np.zeros((3, 3))
@@ -111,13 +114,12 @@ class OffscreenPanda(ShowBase):
         # Setup atoms
         self.atom_count = self.lmp.get_natoms()
         self.atoms = []
-        self.atom_ids = self.lmp.numpy.extract_atom("id")
         self.type_to_symbol = {1: "C"}
         # Add templates for different atoms. Add more or change values depending on amount of atoms in simulation
         self.atom_types = {"C": {"color": [0.1, 0.1, 0.1, 1], "scale": [0.2, 0.2, 0.2]},
                            2: {"color": [0.0, 0.0, 0.9, 1], "scale": [0.15, 0.15, 0.15]}}
         self.atom_bond_cutoffs = {"C": 1.85}
-        self.atom_type_list = self.lmp.numpy.extract_atom("type")
+        self.atom_type_list = self.lmp.numpy.extract_atom("type")[0:len(self.atom_ids)]
         self.atom_symbols = [self.type_to_symbol[t] for t in self.atom_type_list]
         self.createAtomsTask()
 
@@ -202,18 +204,16 @@ class OffscreenPanda(ShowBase):
         if not self.paused:
             self.run_single()
             for i in range(self.atom_count):
-                diff = self.ix[i, :] - self.ix_old[i, :]
-                new_pos = diff @ self.cell
-                new_pos += self.x[i, :]
+                self.atoms[i].setPos(self.x[i][0], self.x[i][1], self.x[i][2])
         return Task.done
 
 
     def run_single(self):
         print("Running single...")
         # store old values for reference
-        #self.x_old = self.x.copy()
+        self.x_old = self.x.copy()
         self.ix_old = self.ix.copy()
-        #self.xu_old = self.xu.copy()
+        self.xu_old = self.xu.copy()
 
         # Run single timestep and get ids and coords of atoms
         self.lmp.command(f"run {self.timestep:.0f}")
@@ -229,7 +229,7 @@ class OffscreenPanda(ShowBase):
         cell[2,1] = yz
         self.cell = cell
 
-        atom_ids = self.lmp.numpy.extract_atom("id")
+        atom_ids = self.lmp.numpy.extract_atom("id")[0:len(self.atom_ids)] # migudo
         x = self.lmp.numpy.extract_atom("x")
         ix = self.lmp.numpy.extract_compute("compute_ix", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
         xu = self.lmp.numpy.extract_compute("compute_xu", LMP_STYLE_ATOM, LMP_TYPE_ARRAY)
@@ -239,11 +239,11 @@ class OffscreenPanda(ShowBase):
         xu_sorted = np.zeros(xu.shape)
         # TODO: Remove loop (use numpy array methods)
         for i in range(len(atom_ids)):
-            x_sorted[atom_ids[i]-1, :] = x[i, :]
+            x = self.lmp.numpy.extract_atom("x")[0:len(self.atom_ids)] # migudo
             ix_sorted[atom_ids[i]-1, :] = ix[i, :]
             xu_sorted[atom_ids[i]-1, :] = xu[i, :]
 
-        self.x = x_sorted
+        self.x = x
         self.ix = ix_sorted
         #self.xu = xu_sorted
 
