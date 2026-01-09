@@ -204,24 +204,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.showbondsbtn.setText("Bonds: Hide")
             self.panda.show_bonds = not self.panda.show_bonds
 
-# TODO: Make timing work on a toggle instead of having to comment out the lines whenever want to disable
-# TODO: Preferably make above be it's own function to keep this cleaner
+
     @QtCore.pyqtSlot()
     def update_frame(self):
         if not self.panda.paused:
             # Run a simulation step
-            #move_start = timer()
             self.panda.moveAtomsTask()
-            #move_end = timer()
-            #print(f"Moved atoms in {move_end - move_start} seconds")
-            # Draw Panda frame
-            #panda_frame_start = timer()
             qimg = self.panda.render_frame_to_qimage()
             self.label.setPixmap(QtGui.QPixmap.fromImage(qimg))
-            #panda_frame_end = timer()
-            #print(f"Drew panda label in {panda_frame_end - panda_frame_start} seconds")
-            # Update graphs
-            #graph_start = timer()
             for key in self.graphs:
                 self.xdata, self.ydatas[key] = self.panda.sim_info["STEP"], self.panda.sim_info[key]
                 self.curves[key].setData(self.xdata, self.ydatas[key])
@@ -229,47 +219,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.xdata.pop(0)
                 for key in self.ydatas:
                     self.ydatas[key].pop(0)
-            #graph_end = timer()
-            #print(f"Updated graphs in {graph_end - graph_start} seconds")
-            # Draw simulation box
-            #box_start = timer()
             if self.panda.show_box:
                 self.panda.drawSimulationBoxTask()
-            #box_end = timer()
-            #print(f"Drew simulation box in {box_end - box_start} seconds")
-            # Draw bonds
-            #bonds_start = timer()
             if self.panda.show_bonds:
                 self.panda.drawBondsTask()
-            #bonds_end = timer()
-            #print(f"Drew bonds in {bonds_end - bonds_start} seconds")
-            #cycle_time = move_end - move_start + panda_frame_end - panda_frame_start + graph_end - graph_start + box_end - box_start + bonds_end - bonds_start
-            #self.total_cycle_time += cycle_time
-            #self.cycle_count += 1
-            #average_cycle_time = self.total_cycle_time / self.cycle_count
-            #print(f"Total runtime: {cycle_time} seconds")
-            #print(f"Average cycle time: {average_cycle_time} seconds")
 
-            # Checks object sizes every timestep and keeps track of the largest value.
-            # Prints size and change when new largest found.
-            # (if memory leak present it will keep printing - otherwise not)
-            """
-            # TODO: Move this to debug.py
-            if self.panda_size - get_size(self.panda) < 0:
-                print(f"\nPanda memory usage status: {get_size(self.panda)}\t{self.panda_size - get_size(self.panda)} bytes")
-                self.panda_size = get_size(self.panda)
-            if self.self_size - get_size(self) < 0:
-                print(f"\nMainWindow memory usage status: {get_size(self)}\t{self.self_size - get_size(self)} bytes")
-                self.self_size = get_size(self)
-            #if self.pandalabel_size - get_size(self.label) < 0:
-            #    print(f"\nPandaLabel memory usage status: {get_size(self.label)}\t{self.pandalabel_size - get_size(self.label)} bytes")
-            #    self.pandalabel_size = get_size(self.label)
-            if self.lmp_size - get_size(self.panda.lmp) < 0:
-                print(f"\nLammps memory usage status: {get_size(self.panda.lmp)}\t{self.lmp_size - get_size(self.panda.lmp)} bytes")
-                self.lmp_size = get_size(self.panda.lmp)
-            if self.graph_size - get_size(self.graphs) < 0:
-                print(f"\nGraph memory usage status: {get_size(self.graphs)}\t{self.graph_size - get_size(self.graphs)} bytes\n")
-                self.graph_size = get_size(self.graphs)
-            """
 
 

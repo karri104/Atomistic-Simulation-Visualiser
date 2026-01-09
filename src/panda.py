@@ -145,7 +145,7 @@ class OffscreenPanda(ShowBase):
         return Task.done
 
     def drawSimulationBoxTask(self):
-        print("Drawing simulation box...")
+        # print("Drawing simulation box...")
         if self.box_path != 0:
             self.box_path.removeNode()
         self.lines = LineSegs()
@@ -193,14 +193,14 @@ class OffscreenPanda(ShowBase):
         return Task.done
 
     def drawBondsTask(self):
-        print("Drawing bonds...")
+        # print("Drawing bonds...")
         calcAtomPairs(self)
         create_bond_geometry(self)
         return Task.done
 
 
     def moveAtomsTask(self):
-        print("Moving atoms...")
+        # print("Moving atoms...")
         if not self.paused:
             self.run_single()
             for i in range(self.atom_count):
@@ -209,7 +209,7 @@ class OffscreenPanda(ShowBase):
 
 
     def run_single(self):
-        print("Running single...")
+        # print("Running single...")
         # store old values for reference
         self.x_old = self.x.copy()
         self.ix_old = self.ix.copy()
