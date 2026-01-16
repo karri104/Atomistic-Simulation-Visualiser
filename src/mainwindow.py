@@ -43,8 +43,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.startstopbtn = QtWidgets.QPushButton("Pause")
         self.startstopbtn.clicked.connect(self.toggle_play)
         buttonbox.addWidget(self.startstopbtn)
-        self.resetbtn = QtWidgets.QPushButton("Reset")
+        self.resetbtn = QtWidgets.QPushButton("Reset Simulation")
         self.resetbtn.clicked.connect(self.reset_simulation)
+        buttonbox.addWidget(self.resetbtn)
+        self.resetbtn = QtWidgets.QPushButton("Reset Camera")
+        self.resetbtn.clicked.connect(self.reset_camera)
         buttonbox.addWidget(self.resetbtn)
 
         # Show object toggle buttons
@@ -168,6 +171,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pressSlider.setValue(0)
         self.panda.lmp.command(f"clear")
         self.panda.setupLammps()
+
+    def reset_camera(self):
+        # Reset camera pivot point back to origin
+        self.panda.cam_pivot.set_pos(0, 0, 0)
+        # Reset zoom delta
+        self.panda.cam_distance = 25
+        # Reset camera position
+        self.panda.cam2.set_pos(0, -self.panda.cam_distance, 3)
+        # Reset camera heading
+        self.panda.cam_pivot.set_hpr(0, 0, 0)
+
+
 
     def toggle_show_object(self, object):
         if object == "box":

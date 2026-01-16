@@ -64,6 +64,16 @@ class OffscreenPanda(ShowBase):
         self.show_atoms = True
         self.show_bonds = True
 
+        # Create a pivot node at the origin (the point you want to orbit around)
+        self.cam_pivot = self.render.attach_new_node("cam_pivot")
+
+        # Reparent the camera to the pivot
+        self.cam2.reparent_to(self.cam_pivot)
+
+        # Set initial distance from pivot
+        self.cam_distance = 25
+        self.cam2.set_pos(0, -self.cam_distance, 3)
+
     def setupLammps(self):
         # Create lammps object and get initial coords
         print("Creating lammps instance...")
@@ -234,21 +244,29 @@ class OffscreenPanda(ShowBase):
         self.x = x
         self.ix = ix_sorted
 
-
     def rotate_camera(self, dx, dy):
-        """Called from mouse drag to orbit the offscreen camera."""
-        self.cam_h = (self.cam_h - dx*0.2) % 360
-        self.cam_p = max(-85, min(85, self.cam_p + dy*0.2))
-        self.cam2.set_hpr(self.cam_h, self.cam_p, 0)
-
+        # Update heading/pitch of pivot
+        h = self.cam_pivot.get_h() - dx * 0.2
+        p = self.cam_pivot.get_p() + dy * 0.2
+        p = max(-85, min(85, p))
+        self.cam_pivot.set_hpr(h, p, 0)
 
     def zoom_camera(self, delta):
-        """Zoom in/out by moving the camera along its Y-axis."""
-        cam = self.cam2
-        y = cam.get_y()
-        y = max(-50, min(-2, y + delta * 0.2))  # clamp between -50 and -2
-        cam.set_y(y)
+        # Zoom by changing distance from pivot
+        self.cam_distance = self.cam_distance - delta
+        self.cam2.set_y(-self.cam_distance)
 
+    def pan_camera(self, dx, dy):
+        # Pan the pivot in camera space (middle mouse drag).
+        # Sensitivity
+        speed = 0.002 * self.cam_distance  # scale with zoom level
+        # Convert pixel delta to movement in camera space
+        # dx -> move right, dy -> move up
+        right = self.cam2.get_quat().get_right()
+        up = self.cam2.get_quat().get_up()
+        move = (right * (-dx * speed)) + (up * (dy * speed))
+        # Apply to pivot
+        self.cam_pivot.set_pos(self.cam_pivot.get_pos() + move)
 
     def render_frame_to_qimage(self):
         # 1) Advance spin
