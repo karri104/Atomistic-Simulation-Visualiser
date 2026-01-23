@@ -173,15 +173,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.panda.setupLammps()
 
     def reset_camera(self):
-        # Reset camera pivot point back to origin
-        self.panda.cam_pivot.set_pos(0, 0, 0)
-        # Reset zoom delta
-        self.panda.cam_distance = 25
-        # Reset camera position
-        self.panda.cam2.set_pos(0, -self.panda.cam_distance, 3)
-        # Reset camera heading
+        self.panda.center_camera()
         self.panda.cam_pivot.set_hpr(0, 0, 0)
-
 
 
     def toggle_show_object(self, object):

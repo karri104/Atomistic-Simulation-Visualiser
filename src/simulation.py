@@ -18,6 +18,7 @@ if __name__ == "__main__":
     panda = OffscreenPanda(W, H)
     panda.moveAtomsTask()
     panda.drawSimulationBoxTask()
+    panda.center_camera()
 
     app = QtWidgets.QApplication(sys.argv)
     win = MainWindow(panda)

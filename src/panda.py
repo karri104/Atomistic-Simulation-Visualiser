@@ -1,3 +1,5 @@
+import math
+import numpy as np
 from PyQt6 import QtGui
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
@@ -33,7 +35,8 @@ class OffscreenPanda(ShowBase):
         cam2 = self.make_camera(buf)
         dr.set_camera(cam2)
         lens = PerspectiveLens()
-        #lens.set_fov(90)
+        self.cam_fov = 45 # vertical fov of camera
+        lens.set_fov(self.cam_fov)
         cam2.node().set_lens(lens)
         cam2.set_pos(4, -25, 3)
         self.cam2 = cam2
@@ -64,14 +67,15 @@ class OffscreenPanda(ShowBase):
         self.show_atoms = True
         self.show_bonds = True
 
-        # Create a pivot node at the origin (the point you want to orbit around)
+        # Create a pivot node (the point you want to orbit around)
         self.cam_pivot = self.render.attach_new_node("cam_pivot")
+        self.cam_pivot.set_pos(10, 10, 10)
 
         # Reparent the camera to the pivot
         self.cam2.reparent_to(self.cam_pivot)
 
         # Set initial distance from pivot
-        self.cam_distance = 25
+        self.cam_distance = 60
         self.cam2.set_pos(0, -self.cam_distance, 3)
 
     def setupLammps(self):
@@ -89,6 +93,7 @@ class OffscreenPanda(ShowBase):
         self.pStart = 0
         self.pStop = 0
         self.bond_pairs = []
+        self.vertices = []
 
         # Grab desired variables from read_from_file.in file
         with open(self.input_file, "r") as f:
@@ -152,11 +157,9 @@ class OffscreenPanda(ShowBase):
         # bottom face
         p = np.zeros(3)
         self.lines.moveTo(p[0], p[1], p[2])
-        bottom_vertices = []
         for i in [1, 2, -1, -2]: # 1==x, 2==y, 3==z
             p += np.sign(i) * self.cell[abs(i)-1,:]
             self.lines.drawTo(p[0], p[1], p[2])
-            bottom_vertices.append(p)
 
         # support sides
         for b in [[], [0], [1], [0,1]]: # base point cell vector combinations
@@ -170,25 +173,15 @@ class OffscreenPanda(ShowBase):
         # top face
         p = self.cell[2,:]
         self.lines.moveTo(p[0], p[1], p[2])
-        top_vertices = []
         for i in [1, 2, -1, -2]: # 1==x, 2==y, 3==z
             p += np.sign(i) * self.cell[abs(i)-1,:]
             self.lines.drawTo(p[0], p[1], p[2])
-            top_vertices.append(p)
 
         self.lines.setThickness(4)
         node = self.lines.create()
         self.box_path = NodePath(node)
         self.box_path.reparentTo(render)
 
-        # Figure out largest distance between vertices for camera autozoom
-        distances = []
-        for i in range(0, 4):
-            for j in range(0, 4):
-                d = np.sqrt((top_vertices[i][0] - bottom_vertices[j][0])**2 +
-                            (top_vertices[i][1] - bottom_vertices[j][1])**2 +
-                            (top_vertices[i][2] - bottom_vertices[j][2])**2)
-                distances.append(d)
         return Task.done
 
     def drawBondsTask(self):
@@ -205,6 +198,31 @@ class OffscreenPanda(ShowBase):
             for i in range(self.atom_count):
                 self.atoms[i].setPos(self.x[i][0], self.x[i][1], self.x[i][2])
         return Task.done
+
+
+    def center_camera(self):
+        # Return a list of (x, y, z) vertices from a LineSegs-created Geom
+        geom_node = self.box_path.node()
+        for i in range(geom_node.get_num_geoms()):
+            geom = geom_node.get_geom(i)
+            vdata = geom.get_vertex_data()
+            reader = GeomVertexReader(vdata, "vertex")
+        while not reader.is_at_end():
+            x = reader.get_data3f()
+            x_data = [x[0], x[1], x[2]]
+            self.vertices.append(x_data)
+
+        # Find max distance between vertices to find needed camera position
+        vertices = np.array(self.vertices)
+        # Geometric center of box
+        center = vertices.mean(axis=0)
+        # Find farthest vertex from center
+        distances = np.linalg.norm(vertices - center, axis=1)
+        radius = distances.max()
+        # Camera distance
+        self.cam_distance = radius / math.sin(math.radians(self.cam_fov/2))
+        self.cam2.set_y(-self.cam_distance)
+        self.cam_pivot.set_pos(center[0], center[1], center[2])
 
 
     def run_single(self):
