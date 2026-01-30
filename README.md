@@ -4,7 +4,24 @@
 Once this code has been successfully installed a simulation can be ran by executing the 'simulation.py' python file.
 
 ## Installation
-IMPORTANT: These instruction assume administrator rights. Non-privileged build instructions currently WIP. Build instructions currently only tested on Ubuntu 24.04.
+There are two installation methods for this project. Manual build and a Dockerised version. **The Dockerised version is easier to run but introduces a potential security risk due to the use of xhost forwarding.**
+
+### Dockerised Install
+First you will need to install Docker Engine. Installation for it can be found at their [website](https://docs.docker.com/engine/install/ubuntu/).
+Next you'll want to clone this repository by running:
+```
+git clone https://github.com/karri104/Atomistic-Simulation-Visualiser ASV
+```
+This will create a directory "ASV", which will be our working directory.
+To build and run this code you will then need to forward x11 to Docker.
+Simplest way to do this by using xhost.
+**If you can do this without the use of xhost, use that different approach since this approach is a potential security risk.**
+Anyway, for the xhost approach all you have to do is run `xhost +local:docker` the first time you run this code each session e.g. after restarting your machine.
+Then you simply need to run `docker compose up --build` whenever you want to run the code.
+The console will include a bunch of errors regarding audio libraries, which can be safely ignored since this project doesn't include sound.
+
+### Manual Install
+IMPORTANT: Build instructions currently only tested on an old version of this code on Ubuntu 24.04.
 
 Since some of the components of this project require very specific versions of python to be installed, you will want to build this project in a virtual environment. First you'll want to create a virtual environment to run the code in. For that you need venv and pip for installing packages:
 

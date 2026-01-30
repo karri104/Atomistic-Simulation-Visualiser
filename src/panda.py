@@ -35,7 +35,7 @@ class OffscreenPanda(ShowBase):
         cam2 = self.make_camera(buf)
         dr.set_camera(cam2)
         lens = PerspectiveLens()
-        self.cam_fov = 45 # vertical fov of camera
+        self.cam_fov = 90 # vertical fov of camera
         lens.set_fov(self.cam_fov)
         cam2.node().set_lens(lens)
         cam2.set_pos(4, -25, 3)

@@ -33,7 +33,7 @@ ENV PATH="/venv/bin:$PATH"
 RUN make install-python
 WORKDIR /app
 
-#Install Python dependencies
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
